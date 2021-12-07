@@ -1,0 +1,34 @@
+--- Original data load ---
+    # Original data : 3711
+--- Remove MMS with only one class ---
+    # Cpds : 818
+    # MMPs : 51
+--- Calclate ECFP ---
+    # Loaded cpds : 818
+    Diameter      : 4
+    nbits         : unfold
+--- Delete low level hash ---
+    # Loaded cpds    : 818
+    Deleted diameter : 0
+    nbits            : unfold
+--- Delete MMPs with Nan ---
+    No Nan was found.
+    All rows containing Nan was deleted
+--- Assign new hash values to unfolded hash ---
+    # Loaded cpds : 818
+    # calculated ecfp : 818
+--- Delete MMPs with Nan ---
+    No Nan was found.
+    All rows containing Nan was deleted
+--- Apply substructure difference ---
+    # Loaded cpds : 818
+--- Delete MMPs with Nan ---
+    Nan was found!
+      pd_idx : 2002
+      id     : 1502333-1502334
+      core   : [R1]c1ncc(o1)c2cc(sc2)S(=O)(=O)N
+      sub1   : [R1]C1CC1
+      sub2   : [R1]C1CCC1
+      class  : -1
+
+    All rows containing Nan was deleted

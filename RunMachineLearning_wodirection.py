@@ -17,7 +17,7 @@ from tqdm                              import tqdm
 from SVM.svmwrappers                   import MMPKernelSVM_sklearn   as svm
 from SVM.svrwrappers                   import MMPKernelSVR_sklearn   as svr
 from SVM.ocsvmwrappers                 import MMPKernelOCSVM_sklearn as ocsvm
-from randomforest.random_forest_wapper import RandomForestClassifier_CV as rf
+from RandomForest.RandomForestClassifier import RandomForestClassifier_CV as rf
 from SVM.svmwrappers                   import MakeInputDict
 from MMP.make_input                    import LeaveOneCoreOut, GetDiverseCore, DelTestCpdFromTrain
 from Tools.ReadWrite                   import ReadDataAndFingerprints, ToPickle, LoadPickle
@@ -35,22 +35,13 @@ from svmviz.svmviz.svmviz              import feature_contributions as fc_origin
 from sklearn.svm                       import SVC
 from Kernels.Kernel                    import funcTanimotoSklearn
 #from MKLpy.algorithms                  import EasyMKL, AverageMKL
-from sklearn.svm                       import SVC
 from Kernels.Kernel                    import funcTanimotoSklearn
 from collections                       import defaultdict
 from sklearnex                         import patch_sklearn
-from GBR.gbr_wrapper                   import XGBoostCV as xgb
+from GradientBoost.XGBoost             import XGBoost_CV as xgb
 
 patch_sklearn()
 
-
-def MakeLogDict(type="classification"):
-
-    if type == "classification":
-        return {"ids":[], "cid":[], "trueY":[], "predY_f":[], "predY_r":[], "c_f":[], "c_r":[], "prob_f":[], "prob_r":[]}
-
-    if type == "regression":
-        return {"ids":[], "cid":[], "trueY":[], "predY_f":[], "C":[], "Nu":[]}
 
 class Base_ECFPECFP():
     
@@ -66,11 +57,9 @@ class Base_ECFPECFP():
         self.kernel_type  = kernel_type
         print("$  Decision function will be applied.\n")
 
-        self.forward_col  = ["core_forward", "sub1_forward", "sub2_forward", "overlap_forward"]
-        self.reverse_col  = ["core_reverse", "sub1_reverse", "sub2_reverse", "overlap_reverse"]
+        self.col  = ["core", "sub1", "sub2", "overlap"]
 
         
-
     def _MakeLogDir(self, logdir, scoredir):
         
         if logdir is None:
@@ -93,30 +82,30 @@ class Base_ECFPECFP():
         if model_name == "svm":
 
             if kernel_type == "product":
+                print('    $ svm with MMPkernel is used.')
                 weight  = False
             else: 
+                print('    $ svm with weighted MMPkernel is used.')
                 weight = kernel_type
 
-            model_f = svm(len_c=self.nbits_cf, decision_func=True, weight_kernel=weight, cv=True)
-            model_r = svm(len_c=self.nbits_cr, decision_func=True, weight_kernel=weight, cv=True)
+            model = svm(len_c=self.nbits_c, decision_func=True, weight_kernel=weight, cv=True)
 
         elif model_name == "random_forest":
-            model_f = rf(njobs=-1, pos_label=1, neg_label=-1)
-            model_r = rf(njobs=-1, pos_label=1, neg_label=-1)
+            print('    $ random forest is used.')
+            model = rf(njobs=-1, pos_label=1, neg_label=-1)
 
         elif model_name == "ocsvm":
-            model_f = ocsvm(len_c=self.nbits_cf, decision_func=True, nu=nu)
-            model_r = ocsvm(len_c=self.nbits_cr, decision_func=True, nu=nu)
+            print('    $ ocsvm with MMPkernel is used.')
+            model = ocsvm(len_c=self.nbits_c, decision_func=True, nu=nu)
             
-        elif model_name == 'XGBoost':
-            model_f = xgb(metrics='mcc', verbose=True)
-            model_r = xgb(metrics='mcc', verbose=True)
+        elif model_name == 'xgboost':
+            print('    $ XGboost is used.')
+            model = xgb()
             
-                
         else:
             NotImplementedError("%s has not been implemented. Please put the obj directly." %model_name)
 
-        return model_f, model_r
+        return model
 
 
     def _CalcFeatureImportance(self, model_name, ml, trdata, tsdata, method, link="identity", proportion="average"):
@@ -167,10 +156,8 @@ class Base_ECFPECFP():
 
     def _SetParams(self):
 
-        self.nbits_cf = FindBitLength(self.ecfp, [self.forward_col[0]])
-        self.nbits_sf = FindBitLength(self.ecfp, self.forward_col[1:] )
-        self.nbits_cr = FindBitLength(self.ecfp, [self.reverse_col[0]])
-        self.nbits_sr = FindBitLength(self.ecfp, self.reverse_col[1:] )
+        self.nbits_c = FindBitLength(self.ecfp, [self.col[0]])
+        self.nbits_s = FindBitLength(self.ecfp, self.col[1:] )
 
         # Leave One Core Out
         self.LOCO_generator = LeaveOneCoreOut(self.main)
@@ -210,19 +197,16 @@ class Base_ECFPECFP():
             print(    "Only AC-MMPs are used for making training data.\n")
             tr = tr[tr["class"]==1]
 
-        trX = self.ecfp.loc[tr.index, :]
-        tsX = self.ecfp.loc[ts.index, :]
-        trY = tr["class"]
-        tsY = ts["class"]
+        df_trX = self.ecfp.loc[tr.index, :]
+        df_tsX = self.ecfp.loc[ts.index, :]
+        df_trY = tr["class"]
+        df_tsY = ts["class"]
 
-        forward      = Hash2Bits(subdiff=False, sub_reverse=False)
-        trX_f, trY_f = forward.GetMMPfingerprints_DF_unfold(df=trX, cols=self.forward_col, Y=trY, nbits=[self.nbits_cf, self.nbits_sf], overlap="concat")
-        tsX_f, tsY_f = forward.GetMMPfingerprints_DF_unfold(df=tsX, cols=self.forward_col, Y=tsY, nbits=[self.nbits_cf, self.nbits_sf], overlap="concat")
+        forward  = Hash2Bits(subdiff=False, sub_reverse=False)
+        trX, trY = forward.GetMMPfingerprints_DF_unfold(df=df_trX, cols=self.col, Y=df_trY, nbits=[self.nbits_c, self.nbits_s], overlap="concat")
+        tsX, tsY = forward.GetMMPfingerprints_DF_unfold(df=df_tsX, cols=self.col, Y=df_tsY, nbits=[self.nbits_c, self.nbits_s], overlap="concat")
 
-        reverse      = Hash2Bits(subdiff=False, sub_reverse=False)
-        trX_r, trY_r = reverse.GetMMPfingerprints_DF_unfold(df=trX, cols=self.reverse_col, Y=trY, nbits=[self.nbits_cr, self.nbits_sr], overlap="concat")
-
-        return tr, ts, trX, trY, tsX, tsY, trX_f, trY_f, tsX_f, tsY_f, trX_r, trY_r
+        return tr, ts, df_trX, df_trY, df_tsX, df_tsY, trX, trY, tsX, tsY
         
     
     def run(self, target, debug=False, kernel_type=False, onlyfccalc=False, proportion="average"):
@@ -292,61 +276,37 @@ class Classification(Base_ECFPECFP):
             
             # Train test split
             print("    $ Prediction for cid%d is going on.\n" %cid)
-            tr, ts, trX, trY, tsX, tsY, trX_f, trY_f, tsX_f, tsY_f, trX_r, trY_r = self._GetMatrices(cid)
+            tr, ts, df_trX, df_trY, df_tsX, df_tsY, trX, trY, tsX, tsY = self._GetMatrices(cid)
             
             # Fit and Predict
-            ml_f, ml_r = self._SetML(self.mname, kernel_type=self.kernel_type)
+            ml = self._SetML(self.mname, kernel_type=self.kernel_type)
             
-            # ml_f.fit(trX_f, trY_f)
-            # predY_f = ml_f.predict(tsX_f)
-            # print("    $ Forward Done.\n")
-
-            ml_r.fit(trX_r, trY_r)
-            predY_r = ml_r.predict(tsX_f)
-            print("    $ Reverce Done.\n")
+            ml.fit(trX, trY)
+            predY = ml.predict(tsX)
+            print("    $ Prediction Done.\n")
 
             # Write log
-            tsids              = ts["id"].tolist()
-            log["ids"]        += tsids
-            log["cid"]        += [cid] * len(tsids)
-            log["trueY"]      += tsY.tolist()
-            log["predY_f"]    += predY_f.tolist()
-            log["predY_r"]    += predY_r.tolist()
+            tsids            = ts["id"].tolist()
+            log["ids"]      += tsids
+            log["cid"]      += [cid] * len(tsids)
+            log["trueY"]    += tsY.tolist()
+            log["predY"]    += predY.tolist()
 
             if self.mname == "svm":
-                log["c_f"] += [ml_f.svc_.C] * len(tsids)
-                log["c_r"] += [ml_r.svc_.C] * len(tsids)
-                log["prob_f"] += ml_f.dec_func_.tolist()
-                log["prob_r"] += ml_r.dec_func_.tolist()
+                log["c"]    += [ml.svc_.C] * len(tsids)
+                log["prob"] += ml.dec_func_.tolist()
 
             elif self.mname == "random_forest":
-                log["prob_f"] += ml_f.score(tsX_f).tolist()
-                log["prob_r"] += ml_r.score(tsX_f).tolist()
+                log["prob"] += ml.score(tsX).tolist()
                 
             elif self.mname == 'XGBoost':
-                log["prob_f"] += ml_f.score(tsX_f).tolist()
-                log["prob_r"] += ml_r.score(tsX_f).tolist()
+                log["prob"] += [prob[1] for prob in ml.score(tsX).tolist()]
             
             # Save
-            df_log   = pd.DataFrame.from_dict(log)
-            self.log = AddLabel(df_log) 
+            self.log = pd.DataFrame.from_dict(log)
             self.log.to_csv(path_log, sep="\t")
 
-            ToPickle(ml_f, self.modeldir+"/cid%d_forward.pickle"%cid)
-            ToPickle(ml_r, self.modeldir+"/cid%d_reverse.pickle"%cid)
-            
-            # # Feature contributions
-            # fcs = self._CalcFeatureImportance(self.mname, ml_f, trdata=trX_f, tsdata=tsX_f, method=self.interpreter)
-            # print("    $ Feature contributions have calculated.\n")
-
-            # if fcs_log is None:
-            #     fcs_log = fcs
-            # else:
-            #     fcs_log = np.vstack([fcs_log, fcs])
-
-            # np.save(path_log[:-4]+"_cid%d.npy" %cid, fcs)
-            # np.save(fcs_log_path, fcs_log)
-
+            ToPickle(ml, self.modeldir+"/cid%d_forward.pickle"%cid)
             print("    $  Log is out.\n")
 
     def _AllMMSPred_SimpleTanimoto(self, t, path_log):
@@ -495,8 +455,8 @@ class ReCalc_SHAP(Base_ECFPECFP):
 if __name__ == "__main__":
     
     bd    = "/home/tamuras0/work/ACPredCompare/"
-    model = "svm"
-    mtype = "MMPkernel"
+    model = "XGBoost"
+    mtype = "wodirection"
     os.chdir(bd)
     os.makedirs("./Log", exist_ok=True)
     os.makedirs("./Score", exist_ok=True)
@@ -505,17 +465,17 @@ if __name__ == "__main__":
     
     for i, sr in tlist.iterrows():
         
-        target = 'melanocortin_receptor_4'#sr['target']
+        target = sr['target']
         
         p = Classification(modeltype   = mtype,
                         model       = model,
                         dir_log     = "./Log/%s" %(model+'_'+mtype),
                         dir_score   = "./Score/%s" %(model+'_'+mtype),
-                        interpreter = "tanimoto",
+                        interpreter = "shap",
                         aconly      = False,
                         )
 
-        p.run(target=target, debug=False)
+        p.run(target=target, debug=True)
         # p.GetScore(t="Thrombin")
         
         #TODO

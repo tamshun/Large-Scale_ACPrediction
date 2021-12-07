@@ -222,8 +222,8 @@ class Curation_Base():
         sub2_wodirec   = [int(i) for i in sr["sub2"].split(" ")]
 
         common_feature = np.intersect1d(sub1_wodirec, sub2_wodirec)
-        flag_s1 = ~np.isin(sub1_wodirec, common_feature)
-        flag_s2 = ~np.isin(sub2_wodirec, common_feature)
+        flag_s1 = ~np.isin(sub1_wodirec, common_feature) #unique features
+        flag_s2 = ~np.isin(sub2_wodirec, common_feature) #unique features
 
         for idx in sr.index:
             
@@ -652,5 +652,8 @@ if __name__=="__main__":
         tname = sr['target']
         type  = "classification"
         
+        if tname+'.tsv' in os.listdir('./Dataset/Data'):
+            continue
+
         Run(tname, type, 4, 0)
     

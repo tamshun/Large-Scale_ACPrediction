@@ -1,0 +1,69 @@
+--- Original data load ---
+    # Original data : 8748
+--- Remove MMS with only one class ---
+    # Cpds : 2877
+    # MMPs : 39
+--- Calclate ECFP ---
+    # Loaded cpds : 2877
+    Diameter      : 4
+    nbits         : unfold
+--- Delete low level hash ---
+    # Loaded cpds    : 2877
+    Deleted diameter : 0
+    nbits            : unfold
+--- Delete MMPs with Nan ---
+    No Nan was found.
+    All rows containing Nan was deleted
+--- Assign new hash values to unfolded hash ---
+    # Loaded cpds : 2877
+    # calculated ecfp : 2877
+--- Delete MMPs with Nan ---
+    No Nan was found.
+    All rows containing Nan was deleted
+--- Apply substructure difference ---
+    # Loaded cpds : 2877
+--- Delete MMPs with Nan ---
+    Nan was found!
+      pd_idx : 1066
+      id     : 262630-264179
+      core   : [R1]N1CCN(CC1)C(=O)C(Cc2ccc(cc2)Cl)NC(=O)C3Cc4ccccc4CN3
+      sub1   : [R1]C1(CCCC1)Cn2cncn2
+      sub2   : [R1]C1(CCCCC1)Cn2cncn2
+      class  : -1
+
+      pd_idx : 3107
+      id     : 303693-303694
+      core   : [R1]C(CN(CC)CC)N1CCN(CC1)C(=O)C(Cc2ccc(cc2)Cl)NC(=O)C3Cc4ccccc4CN3
+      sub1   : [R1]C1CCCC1
+      sub2   : [R1]C1CCCCC1
+      class  : -1
+
+      pd_idx : 3108
+      id     : 303693-303842
+      core   : [R1]C(CN(CC)CC)N1CCN(CC1)C(=O)C(Cc2ccc(cc2)Cl)NC(=O)C3Cc4ccccc4CN3
+      sub1   : [R1]C1CCCCCC1
+      sub2   : [R1]C1CCCC1
+      class  : -1
+
+      pd_idx : 3111
+      id     : 303694-303842
+      core   : [R1]C(CN(CC)CC)N1CCN(CC1)C(=O)C(Cc2ccc(cc2)Cl)NC(=O)C3Cc4ccccc4CN3
+      sub1   : [R1]C1CCCCCC1
+      sub2   : [R1]C1CCCCC1
+      class  : -1
+
+      pd_idx : 5253
+      id     : 347215-347217
+      core   : [R1]CCCn1c2cc(ccc2nc1Nc3ccc(cc3)C(=O)C)C(=O)N(CCC(C)C)CCC(C)C
+      sub1   : [R1]N1CCCC1
+      sub2   : [R1]N1CCCCC1
+      class  : -1
+
+      pd_idx : 7310
+      id     : 363593-363597
+      core   : [R1]N1CC(C(C1)C(=O)N2CCN(CC2)C3(CCCCC3)CNCc4ccccc4)c5ccc(cc5)Cl
+      sub1   : [R1]C1CCCC1
+      sub2   : [R1]C1CCCCC1
+      class  : -1
+
+    All rows containing Nan was deleted
