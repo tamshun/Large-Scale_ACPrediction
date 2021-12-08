@@ -20,7 +20,7 @@ from SVM.ocsvmwrappers                 import MMPKernelOCSVM_sklearn as ocsvm
 from RandomForest.RandomForestClassifier import RandomForestClassifier_CV as rf
 from SVM.svmwrappers                   import MakeInputDict
 from MMP.make_input                    import LeaveOneCoreOut, GetDiverseCore, DelTestCpdFromTrain, MultipleTrainTestSplit
-from Tools.ReadWrite                   import ReadDataAndFingerprints, ToPickle, LoadPickle
+from Tools.ReadWrite                   import ReadDataAndFingerprints, ToPickle, LoadPickle, ToJson, LoadJson
 from Tools.utils                       import BasicInfo
 #from Metrix.scores                     import ScoreTable,RenderDF2Fig
 from Evaluation.Labelling              import AddLabel
@@ -44,7 +44,7 @@ patch_sklearn()
 
 class Base_ECFPECFP():
     
-    def __init__(self, modeltype, model_name, dir_log=None, dir_score=None, interpreter=None, aconly=False, kernel_type="product", data_split_metric='LOCO'):
+    def __init__(self, modeltype, model_name, dir_log=None, dir_score=None, interpreter=None, aconly=False, kernel_type="product"):
         #self.bd      = "/home/tamura/work/Interpretability"
         #os.chdir(self.bd)
         self.mtype        = modeltype
@@ -54,7 +54,6 @@ class Base_ECFPECFP():
         self.interpreter  = interpreter
         self.aconly       = aconly
         self.kernel_type  = kernel_type
-        self.trtssplit    = data_split_metric
         self.col  = ["core", "sub1", "sub2", "overlap"]
         
         print("$  Decision function will be applied.\n")    
@@ -158,15 +157,8 @@ class Base_ECFPECFP():
         self.nbits_c = FindBitLength(self.ecfp, [self.col[0]])
         self.nbits_s = FindBitLength(self.ecfp, self.col[1:] )
         
-        if self.trtssplit == 'LOCO':
-            # Leave One Core Out
-            self.data_split_generator = LeaveOneCoreOut(self.main)
-            self.testsetidx           = self.data_split_generator.keys()
-        
-        elif self.trtssplit == 'trtssplit':
-            # Stratified Shuffled split
-            self.data_split_generator = MultipleTrainTestSplit(self.main, n_dataset=3)
-            self.testsetidx           = self.data_split_generator.keys()
+        self.data_split_generator = MultipleTrainTestSplit(self.main, n_dataset=3)
+        self.testsetidx           = self.data_split_generator.keys()
 
         # Leave One Core Out
         if self.debug: 
@@ -195,7 +187,7 @@ class Base_ECFPECFP():
         ts        = self.main.loc[generator.tsidx,:]
         
         # Check overlap
-        tr = DelTestCpdFromTrain(ts, tr, deltype="both")
+        #tr = DelTestCpdFromTrain(ts, tr, deltype="both")
         
         # Assign pd_sr of fp; [core, sub1, sub2]
         if aconly:
@@ -218,7 +210,6 @@ class Base_ECFPECFP():
         
         print("\n----- %s is proceeding -----\n" %target)
         path_log = os.path.join(self.logdir, "%s_%s.tsv" %(target, self.mtype))
-        
         if debug:
             self.debug=True
         
@@ -259,9 +250,9 @@ class Base_ECFPECFP():
 
 class Classification(Base_ECFPECFP):
 
-    def __init__(self, modeltype, model, dir_log, dir_score, interpreter, aconly, kernel_type="product", data_split_metric='LOCO'):
+    def __init__(self, modeltype, model, dir_log, dir_score, interpreter, aconly, kernel_type="product"):
 
-        super().__init__(modeltype, model_name=model, dir_log=dir_log, dir_score=dir_score, interpreter=interpreter, aconly=aconly, kernel_type=kernel_type, data_split_metric=data_split_metric)
+        super().__init__(modeltype, model_name=model, dir_log=dir_log, dir_score=dir_score, interpreter=interpreter, aconly=aconly, kernel_type=kernel_type)
 
         self.pred_type = "classification"
         
@@ -269,18 +260,18 @@ class Classification(Base_ECFPECFP):
         
         fcs_log_path = path_log[:-4] + "_all.npy"
         fcs_log = None
-            
-        # Initialize
-        log = defaultdict(list) #MakeLogDict(type=self.pred_type)
 
         for cid in self.testsetidx:    
             
+            # Initialize
+            log = defaultdict(list) #MakeLogDict(type=self.pred_type)
+        
             if self.debug:
                 if cid>2:
                     break
             
             # Train test split
-            print("    $ Prediction for cid%d is going on.\n" %cid)
+            print("    $ Prediction for trial%d is going on.\n" %cid)
             tr, ts, df_trX, df_trY, df_tsX, df_tsY, trX, trY, tsX, tsY = self._GetMatrices(cid)
             
             # Fit and Predict
@@ -298,7 +289,6 @@ class Classification(Base_ECFPECFP):
             log["predY"]    += predY.tolist()
 
             if self.mname == "svm":
-                log["c"]    += [ml.svc_.C] * len(tsids)
                 log["prob"] += ml.dec_func_.tolist()
 
             elif self.mname == "random_forest":
@@ -307,11 +297,12 @@ class Classification(Base_ECFPECFP):
             elif self.mname == 'XGBoost':
                 log["prob"] += [prob[1] for prob in ml.score(tsX).tolist()]
             
-            # Save
+            # Save            
+            path_log = os.path.join(self.logdir, "%s_%s_trial%d.tsv" %(target, self.mtype, cid))
             self.log = pd.DataFrame.from_dict(log)
             self.log.to_csv(path_log, sep="\t")
 
-            ToPickle(ml, self.modeldir+"/cid%d_forward.pickle"%cid)
+            ToJson(ml.get_params(), self.modeldir+"/trial%d.pickle"%cid)
             print("    $  Log is out.\n")
 
     def _AllMMSPred_SimpleTanimoto(self, t, path_log):
@@ -463,8 +454,8 @@ if __name__ == "__main__":
     model = "XGBoost"
     mtype = "wodirection"
     os.chdir(bd)
-    os.makedirs("./Log", exist_ok=True)
-    os.makedirs("./Score", exist_ok=True)
+    os.makedirs("./Log_trtssplit", exist_ok=True)
+    os.makedirs("./Score_trtssplit", exist_ok=True)
     
     tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
     
@@ -480,7 +471,7 @@ if __name__ == "__main__":
                         aconly      = False,
                         )
 
-        p.run(target=target, debug=True)
+        p.run(target=target, debug=False)
         # p.GetScore(t="Thrombin")
         
         #TODO
