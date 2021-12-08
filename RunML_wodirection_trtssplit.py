@@ -11,6 +11,7 @@ import pandas as pd
 import numpy as np
 import sys
 import os
+import platform
 import matplotlib.pyplot as plt
 #import shap
 from tqdm                              import tqdm
@@ -86,11 +87,11 @@ class Base_ECFPECFP():
                 print('    $ svm with weighted MMPkernel is used.')
                 weight = kernel_type
 
-            model = svm(len_c=self.nbits_c, decision_func=True, weight_kernel=weight, cv=True)
+            model = svm(len_c=self.nbits_c, decision_func=True, weight_kernel=weight, cv=True, nfold=3)
 
         elif model_name == "random_forest":
             print('    $ random forest is used.')
-            model = rf(njobs=-1, pos_label=1, neg_label=-1)
+            model = rf(njobs=-1, pos_label=1, neg_label=-1, nf=3)
 
         elif model_name == "ocsvm":
             print('    $ ocsvm with MMPkernel is used.')
@@ -150,7 +151,6 @@ class Base_ECFPECFP():
                     fcs = np.vstack([fcs, fc])
             
         return fcs
-
 
     def _SetParams(self):
 
@@ -450,8 +450,12 @@ class ReCalc_SHAP(Base_ECFPECFP):
 
 if __name__ == "__main__":
     
-    bd    = "/home/tamuras0/work/ACPredCompare/"
-    model = "XGBoost"
+    if platform.system() == 'Darwin':
+        bd    = "/Users/tamura/work/ACPredCompare/"
+    else:
+        bd    = "/home/tamuras0/work/ACPredCompare/"
+        
+    model = "SVM"
     mtype = "wodirection"
     os.chdir(bd)
     os.makedirs("./Log_trtssplit", exist_ok=True)
@@ -465,8 +469,8 @@ if __name__ == "__main__":
         
         p = Classification(modeltype   = mtype,
                         model       = model,
-                        dir_log     = "./Log/%s" %(model+'_'+mtype),
-                        dir_score   = "./Score/%s" %(model+'_'+mtype),
+                        dir_log     = "./Log_trtssplit/%s" %(model+'_'+mtype),
+                        dir_score   = "./Score_trtssplit/%s" %(model+'_'+mtype),
                         interpreter = "shap",
                         aconly      = False,
                         )
