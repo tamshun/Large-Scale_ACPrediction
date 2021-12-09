@@ -302,7 +302,8 @@ class Classification(Base_ECFPECFP):
             self.log = pd.DataFrame.from_dict(log)
             self.log.to_csv(path_log, sep="\t")
 
-            ToJson(ml.get_params(), self.modeldir+"/%s_trial%d.json"%(target, cid))
+            params = {key: val for key, val in ml.get_params().items() if key!='kernel'}
+            ToJson(params, self.modeldir+"/%s_trial%d.json"%(target, cid))
             print("    $  Log is out.\n")
 
     def _AllMMSPred_SimpleTanimoto(self, t, path_log):
