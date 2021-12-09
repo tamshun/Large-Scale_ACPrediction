@@ -256,7 +256,7 @@ class Classification(Base_ECFPECFP):
 
         self.pred_type = "classification"
         
-    def _AllMMSPred(self, t, path_log):
+    def _AllMMSPred(self, target, path_log):
         
         fcs_log_path = path_log[:-4] + "_all.npy"
         fcs_log = None
@@ -302,7 +302,7 @@ class Classification(Base_ECFPECFP):
             self.log = pd.DataFrame.from_dict(log)
             self.log.to_csv(path_log, sep="\t")
 
-            ToJson(ml.get_params(), self.modeldir+"/trial%d.pickle"%cid)
+            ToJson(ml.get_params(), self.modeldir+"/%s_trial%d.json"%(target, cid))
             print("    $  Log is out.\n")
 
     def _AllMMSPred_SimpleTanimoto(self, t, path_log):
