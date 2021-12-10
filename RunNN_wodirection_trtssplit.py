@@ -113,13 +113,14 @@ def test(model, device, loss_fn, dataloader):
     correct /= size
     print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
     
-    return pred_score.cpu().detach().numpy(), pred.cpu().detach().numpy()
+    return pred_score.to('cpu').detach().numpy(), pred.to('cpu').detach().numpy()
 
         
 def objective(trial, trX, trY):
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
+    # parameter space
     EPOCH        = 50
     nbits        = trX.shape[1]
     n_layer      = trial.suggest_int('n_layer', 2, 3)
@@ -128,18 +129,27 @@ def objective(trial, trX, trY):
     adam_lr      = trial.suggest_log_uniform('adam_lr', 1e-4, 1e-2)
     batch_size   = trial.suggest_categorical('batch_size', [64, 128, 256])
     
+    # Create NN instance
     loss_fn   = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(lr=adam_lr)
     model     = FullyConnectedNN(nbits, hidden_nodes, drop_rate).to(device)
     
+    # Set up dataloader
     X_tr, X_vl, y_tr, y_vl = train_test_split(trX, trY, test_size=0.2, random_state=42, shuffle=True, stratify=trY)
     dataloader_tr = dataloader(Dataset(fpset=X_tr, label=y_tr), batch_size=batch_size)
     dataloader_vl = dataloader(Dataset(fpset=X_vl, label=y_vl))
     
+    # training
     for step in range(EPOCH):
         train(model, device, loss_fn, optimizer, dataloader_tr)
         predY_score, predY = test(model, device, loss_fn, dataloader_vl)
         score = roc_auc_score(y_true=y_vl, y_score=predY_score)
+            
+        trial.report(score, step)
+
+        # Handle pruning based on the intermediate value.
+        if trial.should_prune():
+            raise optuna.exceptions.TrialPruned()
             
     return score
 
@@ -148,7 +158,7 @@ class Classification(Base_wodirection):
 
     def __init__(self, modeltype, model, dir_log, dir_score):
 
-        super().__init__(modeltype, model_name=model, dir_log=dir_log, dir_score=dir_score)
+        super().__init__(modeltype, model_name=model, dir_log=dir_log, dir_score=dir_score, data_split_metric='trtssplit')
 
         self.pred_type = "classification"
     
@@ -177,14 +187,14 @@ class Classification(Base_wodirection):
         
         pred_score, pred = test(model, device, loss_fn, dataloader_ts)
         
-        return pred_score.cpu().detach().numpy(), pred.cpu().detach().numpy()
+        return pred_score.to('cpu').detach().numpy(), pred.to('cpu').detach().numpy()
     
     def _AllMMSPred(self, target, path_log):
         
         # Initialize
-        log = defaultdict(list) #MakeLogDict(type=self.pred_type)
+        log = defaultdict(list) 
 
-        for cid in self.testidx:    
+        for cid in self.testsetidx:    
             
             if self.debug:
                 if cid>2:
@@ -195,7 +205,8 @@ class Classification(Base_wodirection):
             tr, ts, df_trX, df_trY, df_tsX, df_tsY, trX, trY, tsX, tsY = self._GetMatrices(cid)
             
             # Fit and Predict
-            study = optuna.create_study()
+            pruner = optuna.pruners.MedianPruner()
+            study = optuna.create_study(pruner=pruner, direction='maximize')
             study.optimize(objective, n_trials=100)
             
             ml = self._fit_bestparams(study.best_params, trX, trY)
@@ -210,11 +221,13 @@ class Classification(Base_wodirection):
             log["predY"] += predY.tolist()
             log["prob"]  += score
             
-            # Save
+            # Save            
+            path_log = os.path.join(self.logdir, "%s_%s_trial%d.tsv" %(target, self.mtype, cid))
             self.log = pd.DataFrame.from_dict(log)
             self.log.to_csv(path_log, sep="\t")
 
-            ToJson(ml, self.modeldir+"/%s"%(target, cid))
+            ToJson(ml.get_params(), self.modeldir+"/params_trial%d.json"%cid)
+            torch.save(ml.to('cpu').state_dict(), self.modeldir+"/model_trial%d.pth"%cid)
             print("    $  Log is out.\n")
 
 
@@ -224,8 +237,8 @@ if __name__ == "__main__":
     model = "FCNN"
     mtype = "wodirection"
     os.chdir(bd)
-    os.makedirs("./Log", exist_ok=True)
-    os.makedirs("./Score", exist_ok=True)
+    os.makedirs("./Log_trtssplit", exist_ok=True)
+    os.makedirs("./Score_trtssplit", exist_ok=True)
     
     tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
     
@@ -233,13 +246,12 @@ if __name__ == "__main__":
         
         target = sr['target']
         
-        p = Classification(modeltype   = mtype,
-                        model       = model,
-                        dir_log     = "./Log/%s" %(model+'_'+mtype),
-                        dir_score   = "./Score/%s" %(model+'_'+mtype),
-                        interpreter = "shap",
-                        aconly      = False,
-                        )
+        p = Classification(
+                           modeltype   = mtype,
+                           model       = model,
+                           dir_log     = "./Log_trtssplit/%s" %(model+'_'+mtype),
+                           dir_score   = "./Score_trtssplit/%s" %(model+'_'+mtype),
+                          )
 
         p.run(target=target, debug=True)
         # p.GetScore(t="Thrombin")
