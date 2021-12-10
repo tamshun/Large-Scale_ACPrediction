@@ -195,7 +195,7 @@ class Base_wodirection():
         ts        = self.main.loc[generator.tsidx,:]
         
         # Check overlap
-        tr = DelTestCpdFromTrain(ts, tr, deltype="both")
+        #tr = DelTestCpdFromTrain(ts, tr, deltype="both")
         
         # Assign pd_sr of fp; [core, sub1, sub2]
         if aconly:
