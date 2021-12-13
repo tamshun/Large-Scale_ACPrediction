@@ -145,15 +145,15 @@ def objective(trial, trX, trY):
     X_tr, X_vl, y_tr, y_vl = train_test_split(trX, trY, test_size=0.2, random_state=42, shuffle=True, stratify=trY)
     dataset_tr = Dataset(fpset=X_tr, label=y_tr)
     dataset_vl = Dataset(fpset=X_vl, label=y_vl)
-    dataloader_tr = DataLoader(dataset_tr, shuffle=True, batch_size=batch_size)
-    dataloader_vl = DataLoader(dataset_vl, shuffle=False, batch_size=batch_size)
+    dataloader_tr = DataLoader(dataset_tr, shuffle=True, batch_size=batch_size, num_workers=2)
+    dataloader_vl = DataLoader(dataset_vl, shuffle=False, batch_size=batch_size, num_workers=2)
     
     # training
     for step in range(EPOCH):
         train(model, device, loss_fn, optimizer, dataloader_tr)
         predY_score, predY = test(model, device, loss_fn, dataloader_vl)
         score = roc_auc_score(y_true=y_vl, y_score=predY_score)
-        print('auc: ', score)
+        print(f"AUCROC: {(score):>0.5f}\n")
             
         trial.report(score, step)
 
@@ -179,7 +179,7 @@ class Classification(Base_wodirection):
         EPOCH         = 200
         nbits         = trX.shape[1]
         model         = FullyConnectedNN(nbits=nbits, **params)
-        dataloader_tr = DataLoader(Dataset(fpset=trX, label=trY), shuffle=True ,batch_size=params['batch_size'])
+        dataloader_tr = DataLoader(Dataset(fpset=trX, label=trY), shuffle=True ,batch_size=params['batch_size'], num_workers=2)
         loss_fn       = nn.CrossEntropyLoss()
         optimizer     = torch.optim.Adam(lr=params['adam_lr'])
         
@@ -192,7 +192,7 @@ class Classification(Base_wodirection):
         
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         
-        dataloader_ts = DataLoader(Dataset(fpset=tsX, label=tsY))
+        dataloader_ts = DataLoader(Dataset(fpset=tsX, label=tsY), shuffle=False, num_workers=2)
         loss_fn       = nn.CrossEntropyLoss()
         
         pred_score, pred = test(model, device, loss_fn, dataloader_ts)
