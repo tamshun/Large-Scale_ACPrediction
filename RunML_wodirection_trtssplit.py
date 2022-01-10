@@ -294,8 +294,11 @@ class Classification(Base_ECFPECFP):
             elif self.mname == "random_forest":
                 log["prob"] += [prob[1] for prob in ml.score(tsX).tolist()]
                 
-            elif self.mname == 'XGBoost':
+            elif self.mname == 'xgboost':
                 log["prob"] += [prob[1] for prob in ml.score(tsX).tolist()]
+            
+            else:
+                raise NotImplementedError('%s is not available so far' %self.mname)
             
             # Save            
             path_log = os.path.join(self.logdir, "%s_%s_trial%d.tsv" %(target, self.mtype, cid))
@@ -456,7 +459,7 @@ if __name__ == "__main__":
     else:
         bd    = "/home/tamuras0/work/ACPredCompare/"
         
-    model = "SVM"
+    model = "XGBoost"
     mtype = "wodirection"
     os.chdir(bd)
     os.makedirs("./Log_trtssplit", exist_ok=True)

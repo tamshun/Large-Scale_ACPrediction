@@ -56,8 +56,8 @@ class FullyConnectedNN(nn.Module):
         self.nbits = nbits
         self.nlayer = len(hidden_nodes)
         self.linear_relu_stack = nn.Sequential(OrderedDict([
-                                                ('in-l1'    , nn.Linear(self.nbits,hidden_nodes[0])),
-                                                ('relu'   , nn.ReLU()),                                                
+                                                ('in-l1', nn.Linear(self.nbits, hidden_nodes[0])),
+                                                ('relu' , nn.ReLU()),                                                
                                                 ]))
         
         for i in range(1,self.nlayer):
@@ -172,32 +172,35 @@ class Classification(Base_wodirection):
 
         self.pred_type = "classification"
     
-    def _fit_bestparams(params, trX, trY):
+    def _fit_bestparams(self, params, trX, trY):
         
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         
         EPOCH         = 200
         nbits         = trX.shape[1]
-        model         = FullyConnectedNN(nbits=nbits, **params)
-        dataloader_tr = DataLoader(Dataset(fpset=trX, label=trY), shuffle=True ,batch_size=params['batch_size'], num_workers=2)
-        loss_fn       = nn.CrossEntropyLoss()
-        optimizer     = torch.optim.Adam(lr=params['adam_lr'])
+        model         = FullyConnectedNN(nbits=nbits,
+                                         hidden_nodes=[int(params['num_filter_%d'%i]) for i in range(params['n_layer'])],
+                                         drop_rate=params['drop_rate']
+                                         )
+        dataloader_tr = DataLoader(Dataset(fpset=trX, label=trY), shuffle=True, batch_size=params['batch_size'], num_workers=2)
+        loss_fn       = nn.BCELoss()
+        optimizer     = torch.optim.Adam(model.parameters(), lr=params['adam_lr'])
         
         for step in range(EPOCH):
             train(model, device, loss_fn, optimizer, dataloader_tr)
             
         return model
 
-    def _predict_bestparams(model, tsX, tsY):
+    def _predict_bestparams(self, model, tsX, tsY):
         
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         
         dataloader_ts = DataLoader(Dataset(fpset=tsX, label=tsY), shuffle=False, num_workers=2)
-        loss_fn       = nn.CrossEntropyLoss()
+        loss_fn       = nn.BCELoss()
         
         pred_score, pred = test(model, device, loss_fn, dataloader_ts)
         
-        return pred_score.to('cpu').detach().numpy(), pred.to('cpu').detach().numpy()
+        return pred_score, pred
     
     def _AllMMSPred(self, target, path_log):
         
@@ -220,7 +223,7 @@ class Classification(Base_wodirection):
             pruner = optuna.pruners.MedianPruner()
             study = optuna.create_study(pruner=pruner, direction='maximize')
             objective_partial = partial(objective, trX=trX, trY=trY)
-            study.optimize(objective_partial, n_trials=100)
+            study.optimize(objective_partial, n_trials=100) #NOTE!!!!
             
             ml = self._fit_bestparams(study.best_params, trX, trY)
             score, predY = self._predict_bestparams(ml, tsX, tsY)
@@ -231,15 +234,15 @@ class Classification(Base_wodirection):
             log["ids"]   += tsids
             log["cid"]   += [cid] * len(tsids)
             log["trueY"] += tsY.tolist()
-            log["predY"] += predY.tolist()
-            log["prob"]  += score
+            log["predY"] += predY.flatten().astype(int).tolist()
+            log["prob"]  += score.flatten().tolist()
             
             # Save            
             path_log = os.path.join(self.logdir, "%s_%s_trial%d.tsv" %(target, self.mtype, cid))
             self.log = pd.DataFrame.from_dict(log)
             self.log.to_csv(path_log, sep="\t")
 
-            ToJson(ml.get_params(), self.modeldir+"/params_trial%d.json"%cid)
+            ToJson(study.best_params, self.modeldir+"/params_trial%d.json"%cid)
             torch.save(ml.to('cpu').state_dict(), self.modeldir+"/model_trial%d.pth"%cid)
             print("    $  Log is out.\n")
 
