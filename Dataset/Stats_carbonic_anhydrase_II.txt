@@ -1,0 +1,28 @@
+Target name: carbonic_anhydrase_II
+
+
+--- Whole dataset stats---
+#data: 989
+#ac: 248
+#non-ac: 741
+#MMS: 70
+
+
+pKi_max: 11.00
+pKi_ave: 7.13
+pKi_min: 0.70
+
+
+#HA_sub1_max: 12.00
+#HA_sub1_ave: 4.60
+#HA_sub1_min: 1.00
+
+
+#HA_sub2_max: 11.00
+#HA_sub2_ave: 4.90
+#HA_sub2_min: 1.00
+
+
+--- Stats by MMS---
+
+

@@ -1,0 +1,28 @@
+Target name: dopamine_d2_receptor
+
+
+--- Whole dataset stats---
+#data: 6572
+#ac: 182
+#non-ac: 6390
+#MMS: 57
+
+
+pKi_max: 10.24
+pKi_ave: 6.70
+pKi_min: 2.85
+
+
+#HA_sub1_max: 13.00
+#HA_sub1_ave: 7.42
+#HA_sub1_min: 1.00
+
+
+#HA_sub2_max: 13.00
+#HA_sub2_ave: 7.26
+#HA_sub2_min: 1.00
+
+
+--- Stats by MMS---
+
+

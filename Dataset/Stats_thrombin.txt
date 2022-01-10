@@ -1,0 +1,28 @@
+Target name: thrombin
+
+
+--- Whole dataset stats---
+#data: 839
+#ac: 311
+#non-ac: 528
+#MMS: 29
+
+
+pKi_max: 10.30
+pKi_ave: 6.11
+pKi_min: 2.81
+
+
+#HA_sub1_max: 13.00
+#HA_sub1_ave: 6.30
+#HA_sub1_min: 1.00
+
+
+#HA_sub2_max: 13.00
+#HA_sub2_ave: 7.42
+#HA_sub2_min: 1.00
+
+
+--- Stats by MMS---
+
+

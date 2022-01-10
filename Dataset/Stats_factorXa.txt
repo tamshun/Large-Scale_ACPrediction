@@ -1,0 +1,28 @@
+Target name: factorXa
+
+
+--- Whole dataset stats---
+#data: 4721
+#ac: 848
+#non-ac: 3873
+#MMS: 63
+
+
+pKi_max: 11.40
+pKi_ave: 8.35
+pKi_min: 3.90
+
+
+#HA_sub1_max: 13.00
+#HA_sub1_ave: 6.98
+#HA_sub1_min: 1.00
+
+
+#HA_sub2_max: 13.00
+#HA_sub2_ave: 7.38
+#HA_sub2_min: 1.00
+
+
+--- Stats by MMS---
+
+
