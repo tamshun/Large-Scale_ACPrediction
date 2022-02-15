@@ -32,7 +32,7 @@ class Curation_Base():
         
 
     def _readfile(self, bd):
-        path = os.path.join(bd, "Data/%s_all.tsv" %self.t)
+        path = os.path.join(bd, "Data/%s.tsv" %self.t)
         df = pd.read_csv(path, sep='\t', index_col=0)
 
         WriteMsgLogStdout(self.log, "--- Original data load ---")
@@ -44,13 +44,13 @@ class Curation_Base():
     def RemoveOneClassMMS(self):
 
         df = self.original_file
-        df, _ = GetDiverseCore(df)
+        # df, _ = GetDiverseCore(df)
 
         outpath = self.path_two_cls_main
 
-        WriteMsgLogStdout(self.log, "--- Remove MMS with only one class ---")
-        WriteMsgLogStdout(self.log, "    # Cpds : %d"%df.shape[0])
-        WriteMsgLogStdout(self.log, "    # MMPs : %d"%df["core_id"].max())
+        # WriteMsgLogStdout(self.log, "--- Remove MMS with only one class ---")
+        # WriteMsgLogStdout(self.log, "    # Cpds : %d"%df.shape[0])
+        # WriteMsgLogStdout(self.log, "    # MMPs : %d"%df["core_id"].max())
 
         df.to_csv(outpath, sep="\t")
 
@@ -649,11 +649,11 @@ if __name__=="__main__":
     
     for i, sr in tlist.iterrows():
 
-        tname = sr['target']
+        tname = sr['chembl_tid']
         type  = "classification"
         
-        if tname+'.tsv' in os.listdir('./Dataset/Data'):
-            continue
+        # if tname+'.tsv' in os.listdir('./Dataset/Data'):
+        #     continue
 
         Run(tname, type, 4, 0)
     

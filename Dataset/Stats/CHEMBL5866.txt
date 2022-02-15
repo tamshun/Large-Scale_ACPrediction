@@ -1,0 +1,71 @@
+Target name: CHEMBL5866
+
+
+--- Whole dataset stats---
+#data: 21
+#ac: 0
+#non-ac: 21
+#MMS: 1
+
+
+pKd_max: 5.31
+pKd_ave: 4.46
+pKd_min: 4.00
+pKd_thres: 1.393
+
+
+#HA_max: 24.00
+#HA_ave: 22.00
+#HA_min: 20.00
+
+
+MW_max: 325.32
+MW_ave: 295.64
+MW_min: 264.24
+
+
+#HA_sub1_max: 8.00
+#HA_sub1_ave: 6.33
+#HA_sub1_min: 4.00
+
+
+#HA_sub2_max: 8.00
+#HA_sub2_ave: 5.90
+#HA_sub2_min: 4.00
+
+
+--- Stats by MMS---
+
+
+--- cid: 0---
+#data: 21
+#ac: 0
+#non-ac: 21
+#MMS: 1
+
+
+pKi_max: 5.31
+pKi_ave: 4.52
+pKi_min: 4.00
+
+
+#HA_max: 24.00
+#HA_ave: 22.00
+#HA_min: 20.00
+
+
+MW_max: 325.32
+MW_ave: 295.64
+MW_min: 264.24
+
+
+#HA_sub1_max: 8.00
+#HA_sub1_ave: 6.33
+#HA_sub1_min: 4.00
+
+
+#HA_sub2_max: 8.00
+#HA_sub2_ave: 5.90
+#HA_sub2_min: 4.00
+
+

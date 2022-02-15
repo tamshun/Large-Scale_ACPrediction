@@ -1,0 +1,487 @@
+Target name: CHEMBL2360
+
+
+--- Whole dataset stats---
+#data: 179
+#ac: 9
+#non-ac: 170
+#MMS: 14
+
+
+pKd_max: 8.66
+pKd_ave: 6.11
+pKd_min: 4.46
+pKd_thres: 1.753
+
+
+#HA_max: 35.00
+#HA_ave: 27.25
+#HA_min: 22.00
+
+
+MW_max: 561.36
+MW_ave: 425.31
+MW_min: 326.25
+
+
+#HA_sub1_max: 10.00
+#HA_sub1_ave: 5.62
+#HA_sub1_min: 3.00
+
+
+#HA_sub2_max: 11.00
+#HA_sub2_ave: 6.06
+#HA_sub2_min: 3.00
+
+
+--- Stats by MMS---
+
+
+--- cid: 0---
+#data: 69
+#ac: 4
+#non-ac: 65
+#MMS: 1
+
+
+pKi_max: 6.72
+pKi_ave: 5.28
+pKi_min: 4.46
+
+
+#HA_max: 28.00
+#HA_ave: 24.64
+#HA_min: 22.00
+
+
+MW_max: 439.30
+MW_ave: 375.49
+MW_min: 326.25
+
+
+#HA_sub1_max: 9.00
+#HA_sub1_ave: 5.13
+#HA_sub1_min: 3.00
+
+
+#HA_sub2_max: 9.00
+#HA_sub2_ave: 5.97
+#HA_sub2_min: 3.00
+
+
+--- cid: 1---
+#data: 93
+#ac: 2
+#non-ac: 91
+#MMS: 2
+
+
+pKi_max: 7.52
+pKi_ave: 6.62
+pKi_min: 5.70
+
+
+#HA_max: 30.00
+#HA_ave: 26.06
+#HA_min: 23.00
+
+
+MW_max: 454.31
+MW_ave: 395.30
+MW_min: 346.28
+
+
+#HA_sub1_max: 10.00
+#HA_sub1_ave: 6.00
+#HA_sub1_min: 3.00
+
+
+#HA_sub2_max: 10.00
+#HA_sub2_ave: 6.04
+#HA_sub2_min: 3.00
+
+
+--- cid: 2---
+#data: 1
+#ac: 1
+#non-ac: 0
+#MMS: 3
+
+
+pKi_max: 8.66
+pKi_ave: 7.44
+pKi_min: 6.22
+
+
+#HA_max: 31.00
+#HA_ave: 30.50
+#HA_min: 30.00
+
+
+MW_max: 481.29
+MW_ave: 473.29
+MW_min: 465.29
+
+
+#HA_sub1_max: 6.00
+#HA_sub1_ave: 6.00
+#HA_sub1_min: 6.00
+
+
+#HA_sub2_max: 7.00
+#HA_sub2_ave: 7.00
+#HA_sub2_min: 7.00
+
+
+--- cid: 3---
+#data: 2
+#ac: 1
+#non-ac: 1
+#MMS: 4
+
+
+pKi_max: 8.00
+pKi_ave: 6.70
+pKi_min: 5.79
+
+
+#HA_max: 34.00
+#HA_ave: 32.33
+#HA_min: 31.00
+
+
+MW_max: 546.35
+MW_ave: 508.37
+MW_min: 482.37
+
+
+#HA_sub1_max: 4.00
+#HA_sub1_ave: 4.00
+#HA_sub1_min: 4.00
+
+
+#HA_sub2_max: 6.00
+#HA_sub2_ave: 4.50
+#HA_sub2_min: 3.00
+
+
+--- cid: 4---
+#data: 3
+#ac: 1
+#non-ac: 2
+#MMS: 5
+
+
+pKi_max: 7.52
+pKi_ave: 6.93
+pKi_min: 5.72
+
+
+#HA_max: 33.00
+#HA_ave: 31.00
+#HA_min: 29.00
+
+
+MW_max: 511.41
+MW_ave: 474.88
+MW_min: 436.40
+
+
+#HA_sub1_max: 8.00
+#HA_sub1_ave: 7.33
+#HA_sub1_min: 7.00
+
+
+#HA_sub2_max: 11.00
+#HA_sub2_ave: 10.33
+#HA_sub2_min: 10.00
+
+
+--- cid: 5---
+#data: 1
+#ac: 0
+#non-ac: 1
+#MMS: 6
+
+
+pKi_max: 8.38
+pKi_ave: 7.95
+pKi_min: 7.52
+
+
+#HA_max: 32.00
+#HA_ave: 31.50
+#HA_min: 31.00
+
+
+MW_max: 496.31
+MW_ave: 488.31
+MW_min: 480.31
+
+
+#HA_sub1_max: 6.00
+#HA_sub1_ave: 6.00
+#HA_sub1_min: 6.00
+
+
+#HA_sub2_max: 7.00
+#HA_sub2_ave: 7.00
+#HA_sub2_min: 7.00
+
+
+--- cid: 6---
+#data: 1
+#ac: 0
+#non-ac: 1
+#MMS: 7
+
+
+pKi_max: 5.60
+pKi_ave: 5.31
+pKi_min: 5.01
+
+
+#HA_max: 29.00
+#HA_ave: 28.50
+#HA_min: 28.00
+
+
+MW_max: 519.18
+MW_ave: 512.17
+MW_min: 505.15
+
+
+#HA_sub1_max: 6.00
+#HA_sub1_ave: 6.00
+#HA_sub1_min: 6.00
+
+
+#HA_sub2_max: 5.00
+#HA_sub2_ave: 5.00
+#HA_sub2_min: 5.00
+
+
+--- cid: 7---
+#data: 1
+#ac: 0
+#non-ac: 1
+#MMS: 8
+
+
+pKi_max: 5.82
+pKi_ave: 5.78
+pKi_min: 5.74
+
+
+#HA_max: 28.00
+#HA_ave: 27.50
+#HA_min: 27.00
+
+
+MW_max: 440.28
+MW_ave: 433.27
+MW_min: 426.26
+
+
+#HA_sub1_max: 5.00
+#HA_sub1_ave: 5.00
+#HA_sub1_min: 5.00
+
+
+#HA_sub2_max: 6.00
+#HA_sub2_ave: 6.00
+#HA_sub2_min: 6.00
+
+
+--- cid: 8---
+#data: 1
+#ac: 0
+#non-ac: 1
+#MMS: 9
+
+
+pKi_max: 5.34
+pKi_ave: 5.05
+pKi_min: 4.77
+
+
+#HA_max: 28.00
+#HA_ave: 27.50
+#HA_min: 27.00
+
+
+MW_max: 439.29
+MW_ave: 432.28
+MW_min: 425.27
+
+
+#HA_sub1_max: 6.00
+#HA_sub1_ave: 6.00
+#HA_sub1_min: 6.00
+
+
+#HA_sub2_max: 5.00
+#HA_sub2_ave: 5.00
+#HA_sub2_min: 5.00
+
+
+--- cid: 9---
+#data: 1
+#ac: 0
+#non-ac: 1
+#MMS: 10
+
+
+pKi_max: 7.00
+pKi_ave: 6.80
+pKi_min: 6.60
+
+
+#HA_max: 30.00
+#HA_ave: 29.50
+#HA_min: 29.00
+
+
+MW_max: 534.19
+MW_ave: 527.18
+MW_min: 520.17
+
+
+#HA_sub1_max: 6.00
+#HA_sub1_ave: 6.00
+#HA_sub1_min: 6.00
+
+
+#HA_sub2_max: 5.00
+#HA_sub2_ave: 5.00
+#HA_sub2_min: 5.00
+
+
+--- cid: 10---
+#data: 3
+#ac: 0
+#non-ac: 3
+#MMS: 11
+
+
+pKi_max: 7.52
+pKi_ave: 7.48
+pKi_min: 7.40
+
+
+#HA_max: 35.00
+#HA_ave: 33.33
+#HA_min: 32.00
+
+
+MW_max: 561.36
+MW_ave: 523.38
+MW_min: 497.38
+
+
+#HA_sub1_max: 4.00
+#HA_sub1_ave: 3.67
+#HA_sub1_min: 3.00
+
+
+#HA_sub2_max: 6.00
+#HA_sub2_ave: 5.00
+#HA_sub2_min: 3.00
+
+
+--- cid: 11---
+#data: 1
+#ac: 0
+#non-ac: 1
+#MMS: 12
+
+
+pKi_max: 6.30
+pKi_ave: 6.15
+pKi_min: 6.00
+
+
+#HA_max: 31.00
+#HA_ave: 29.50
+#HA_min: 28.00
+
+
+MW_max: 482.37
+MW_ave: 460.83
+MW_min: 439.30
+
+
+#HA_sub1_max: 7.00
+#HA_sub1_ave: 7.00
+#HA_sub1_min: 7.00
+
+
+#HA_sub2_max: 10.00
+#HA_sub2_ave: 10.00
+#HA_sub2_min: 10.00
+
+
+--- cid: 12---
+#data: 1
+#ac: 0
+#non-ac: 1
+#MMS: 13
+
+
+pKi_max: 6.00
+pKi_ave: 5.87
+pKi_min: 5.74
+
+
+#HA_max: 27.00
+#HA_ave: 26.50
+#HA_min: 26.00
+
+
+MW_max: 426.26
+MW_ave: 419.24
+MW_min: 412.23
+
+
+#HA_sub1_max: 6.00
+#HA_sub1_ave: 6.00
+#HA_sub1_min: 6.00
+
+
+#HA_sub2_max: 5.00
+#HA_sub2_ave: 5.00
+#HA_sub2_min: 5.00
+
+
+--- cid: 13---
+#data: 1
+#ac: 0
+#non-ac: 1
+#MMS: 14
+
+
+pKi_max: 8.22
+pKi_ave: 7.87
+pKi_min: 7.52
+
+
+#HA_max: 28.00
+#HA_ave: 27.50
+#HA_min: 27.00
+
+
+MW_max: 441.27
+MW_ave: 434.26
+MW_min: 427.24
+
+
+#HA_sub1_max: 5.00
+#HA_sub1_ave: 5.00
+#HA_sub1_min: 5.00
+
+
+#HA_sub2_max: 6.00
+#HA_sub2_ave: 6.00
+#HA_sub2_min: 6.00
+
+

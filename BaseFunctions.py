@@ -9,14 +9,11 @@ Created on Thu Jun 11 14:09:59 2020
 import pandas as pd
 import numpy as np
 import os
-#import shap
+import joblib
 from MMP.make_input                    import LeaveOneCoreOut, GetDiverseCore, DelTestCpdFromTrain, MultipleTrainTestSplit
 from Tools.ReadWrite                   import ToJson
 from Fingerprint.Hash2BitManager       import Hash2Bits, FindBitLength
 from collections                       import defaultdict
-from sklearnex                         import patch_sklearn
-
-patch_sklearn()
 
 class Base_wodirection():
     
@@ -78,22 +75,44 @@ class Base_wodirection():
 
 
     def _GetMatrices(self, cid, aconly=False):
+        '''
+        Wrapper function of TrainTestSplit_main, TrainTestSplit_ecfp, Hash2Bits 
+        '''
+        tr, ts = self._TrainTestSplit_main(cid, aconly)
+        
+        df_trX, df_tsX = self._TrainTestSplit_ecfp(tr, ts)
+        
+        df_trY, df_tsY, trX, trY, tsX, tsY = self._Hash2Bits(tr, ts, df_trX, df_tsX)
 
+        return tr, ts, df_trX, df_trY, df_tsX, df_tsY, trX, trY, tsX, tsY
+        
+    
+    def _TrainTestSplit_main(self, cid, aconly):
+        
         generator = self.data_split_generator[cid]
         tr        = self.main.loc[generator.tridx,:]
         ts        = self.main.loc[generator.tsidx,:]
         
         # Check leak cpds
         if self.del_leak:
-            tr = DelTestCpdFromTrain(ts, tr, deltype="both")
+            tr = DelTestCpdFromTrain(ts, tr, id1='chembl_cid1', id2='chembl_cid2', deltype="both", biased_check=False)
         
         # Assign pd_sr of fp; [core, sub1, sub2]
         if aconly:
             print(    "Only AC-MMPs are used for making training data.\n")
             tr = tr[tr["class"]==1]
-
+            
+        return tr, ts
+    
+    def _TrainTestSplit_ecfp(self, tr, ts):
+        
         df_trX = self.ecfp.loc[tr.index, :]
         df_tsX = self.ecfp.loc[ts.index, :]
+        
+        return df_trX, df_tsX
+    
+    def _Hash2Bits(self, tr, ts, df_trX, df_tsX):
+        
         df_trY = tr["class"]
         df_tsY = ts["class"]
 
@@ -101,21 +120,83 @@ class Base_wodirection():
         trX, trY = forward.GetMMPfingerprints_DF_unfold(df=df_trX, cols=self.col, Y=df_trY, nbits=[self.nbits_c, self.nbits_s], overlap="concat")
         tsX, tsY = forward.GetMMPfingerprints_DF_unfold(df=df_tsX, cols=self.col, Y=df_tsY, nbits=[self.nbits_c, self.nbits_s], overlap="concat")
 
-        return tr, ts, df_trX, df_trY, df_tsX, df_tsY, trX, trY, tsX, tsY
+        return df_trY, df_tsY, trX, trY, tsX, tsY
+    
+    
+    def _GetMatrices_3parts(self, cid, aconly=False):
+        '''
+        Wrapper function of TrainTestSplit_main, TrainTestSplit_ecfp, Hash2Bits 
+        '''
+        tr, ts = self._TrainTestSplit_main(cid, aconly)
         
+        df_trX, df_tsX = self._TrainTestSplit_ecfp(tr, ts)
+        
+        df_trY, df_tsY, trX, trY, tsX, tsY = self._Hash2Bits(tr, ts, df_trX, df_tsX)
+
+        return tr, ts, df_trX, df_trY, df_tsX, df_tsY, trX, trY, tsX, tsY
+    
+    def _Hash2Bits_3parts(self, tr, ts, df_trX, df_tsX):
+        
+        df_trY = tr["class"]
+        df_tsY = ts["class"]
+
+        forward  = Hash2Bits(subdiff=False, sub_reverse=False)
+        trX, trY = forward.GetSeparatedfingerprints_DF_unfold(df=df_trX, cols=self.col, Y=df_trY, nbits=[self.nbits_c, self.nbits_s], overlap="concat")
+        tsX, tsY = forward.GetSeparatedfingerprints_DF_unfold(df=df_tsX, cols=self.col, Y=df_tsY, nbits=[self.nbits_c, self.nbits_s], overlap="concat")
+
+        return df_trY, df_tsY, trX, trY, tsX, tsY
+    
     
     def run(self, target, debug=False, onlyfccalc=False):
         
         print("\n----- %s is proceeding -----\n" %target)
-        path_log = os.path.join(self.logdir, "%s_%s.tsv" %(target, self.mtype))
         
         if debug:
             self.debug=True
         
         self.main, self.ecfp = self._ReadDataFile(target, acbits=self.aconly)
+        
         self._SetParams()
-        self._AllMMSPred(target, path_log)
+        self._AllMMSPred(target)
+        
+        
+    def run_parallel(self, target_list, njob=-1):
+        result = joblib.Parallel(n_jobs=njob)(joblib.delayed(self.run)(target) for target in target_list)
+        
+        
+    
+    def _IsPredictableTarget(self):
+        data = self.main
+        
+        bool_nsample = bool(data.shape[0] > 50)
+        bool_nmms    = bool(np.unique(data['core_id']).shape[0] > 1)
+        flag         = bool(bool_nsample * bool_nmms)
+        
+        if flag:
+            gbr         = data.groupby(['core_id', 'class'])
+            n_mms       = gbr.count().index.max()[0] + 1
+            n_class     = gbr.count().index.shape[0]
+            bool_nclass = bool((n_class - n_mms) >= 2)
             
+            flag = bool(flag * bool_nclass)
+        
+        return flag
+    
+    
+    def _IsPredictableSeries(self, tr, ts, min_npos):
+        '''
+        analyse if given series is predictable or not.
+        
+        Requirement
+        - tr/ts have at least one data
+        - tr has positive sample at least the number of cv so that each cv set has at least one positive sample  
+        '''
+        n_tr = bool(tr.shape[0] > 0)
+        n_ts = bool(ts.shape[0] > 0) 
+        n_pos_tr = bool(tr[tr['class']==1].shape[0] >= min_npos)
+        
+        return bool(n_tr * n_ts * n_pos_tr)         
+    
                 
     def _SetML(self):
         

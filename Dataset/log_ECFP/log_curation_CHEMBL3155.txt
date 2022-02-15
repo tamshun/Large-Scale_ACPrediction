@@ -1,0 +1,24 @@
+--- Original data load ---
+    # Original data : 66
+--- Calclate ECFP ---
+    # Loaded cpds : 66
+    Diameter      : 4
+    nbits         : unfold
+--- Delete low level hash ---
+    # Loaded cpds    : 66
+    Deleted diameter : 0
+    nbits            : unfold
+--- Delete MMPs with Nan ---
+    No Nan was found.
+    All rows containing Nan was deleted
+--- Assign new hash values to unfolded hash ---
+    # Loaded cpds : 66
+    # calculated ecfp : 66
+--- Delete MMPs with Nan ---
+    No Nan was found.
+    All rows containing Nan was deleted
+--- Apply substructure difference ---
+    # Loaded cpds : 66
+--- Delete MMPs with Nan ---
+    No Nan was found.
+    All rows containing Nan was deleted

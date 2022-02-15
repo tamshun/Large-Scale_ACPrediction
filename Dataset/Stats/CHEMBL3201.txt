@@ -1,0 +1,71 @@
+Target name: CHEMBL3201
+
+
+--- Whole dataset stats---
+#data: 3
+#ac: 0
+#non-ac: 3
+#MMS: 1
+
+
+pKd_max: 7.92
+pKd_ave: 7.92
+pKd_min: 7.92
+pKd_thres: 0.000
+
+
+#HA_max: 23.00
+#HA_ave: 21.33
+#HA_min: 20.00
+
+
+MW_max: 312.40
+MW_ave: 289.03
+MW_min: 270.32
+
+
+#HA_sub1_max: 2.00
+#HA_sub1_ave: 1.33
+#HA_sub1_min: 1.00
+
+
+#HA_sub2_max: 4.00
+#HA_sub2_ave: 3.33
+#HA_sub2_min: 2.00
+
+
+--- Stats by MMS---
+
+
+--- cid: 0---
+#data: 3
+#ac: 0
+#non-ac: 3
+#MMS: 1
+
+
+pKi_max: 7.92
+pKi_ave: 7.92
+pKi_min: 7.92
+
+
+#HA_max: 23.00
+#HA_ave: 21.33
+#HA_min: 20.00
+
+
+MW_max: 312.40
+MW_ave: 289.03
+MW_min: 270.32
+
+
+#HA_sub1_max: 2.00
+#HA_sub1_ave: 1.33
+#HA_sub1_min: 1.00
+
+
+#HA_sub2_max: 4.00
+#HA_sub2_ave: 3.33
+#HA_sub2_min: 2.00
+
+

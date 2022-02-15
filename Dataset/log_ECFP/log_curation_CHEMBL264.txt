@@ -1,0 +1,150 @@
+--- Original data load ---
+    # Original data : 2035
+--- Calclate ECFP ---
+    # Loaded cpds : 2035
+    Diameter      : 4
+    nbits         : unfold
+--- Delete low level hash ---
+    # Loaded cpds    : 2035
+    Deleted diameter : 0
+    nbits            : unfold
+--- Delete MMPs with Nan ---
+    No Nan was found.
+    All rows containing Nan was deleted
+--- Assign new hash values to unfolded hash ---
+    # Loaded cpds : 2035
+    # calculated ecfp : 2035
+--- Delete MMPs with Nan ---
+    No Nan was found.
+    All rows containing Nan was deleted
+--- Apply substructure difference ---
+    # Loaded cpds : 2035
+--- Delete MMPs with Nan ---
+    Nan was found!
+      pd_idx : 430
+      id     : CHEMBL1095535_CHEMBL1098487-CHEMBL1094561
+      core   : [R1]N1CC(CC1C(=O)N2CCCN(CC2)C3CCC3)Oc4ccc(cc4)F
+      sub1   : [R1]C1CC1
+      sub2   : [R1]C1CCC1
+      class  : -1
+
+      pd_idx : 507
+      id     : CHEMBL1097884-CHEMBL1097883_CHEMBL1823047
+      core   : [R1]N1CCCN(CC1)C(=O)C2CC(CN2)Oc3ccc(cc3)C#N
+      sub1   : [R1]C1CC1
+      sub2   : [R1]C1CCCC1
+      class  : -1
+
+      pd_idx : 955
+      id     : CHEMBL383377-CHEMBL193953
+      core   : [R1]N1CCC(CC1)Oc2ccc(cc2)C#N
+      sub1   : [R1]C1CCCCC1
+      sub2   : [R1]C1CCCC1
+      class  : -1
+
+      pd_idx : 986
+      id     : CHEMBL370169-CHEMBL194441
+      core   : [R1]Cc1ccc(cc1)OC2CCN(CC2)C(C)C
+      sub1   : [R1]N1CCCC1
+      sub2   : [R1]N1CCCCC1
+      class  : -1
+
+      pd_idx : 989
+      id     : CHEMBL194441-CHEMBL427177
+      core   : [R1]Cc1ccc(cc1)OC2CCN(CC2)C(C)C
+      sub1   : [R1]N1CCCCCC1
+      sub2   : [R1]N1CCCCC1
+      class  : -1
+
+      pd_idx : 1019
+      id     : CHEMBL1951053-CHEMBL1951054
+      core   : [R1]CCCOc1ccc(cc1)C(=O)CN2CCOCC2
+      sub1   : [R1]N1CCCC1
+      sub2   : [R1]N1CCCCC1
+      class  : -1
+
+      pd_idx : 1024
+      id     : CHEMBL195815-CHEMBL372471
+      core   : [R1]Cc1ccc(cc1)OC2CCN(CC2)C(C)C
+      sub1   : [R1]N1CCCN(CC1)C
+      sub2   : [R1]N1CCN(CC1)C
+      class  : -1
+
+      pd_idx : 1529
+      id     : CHEMBL404247-CHEMBL256390
+      core   : [R1]N1CCN(CC1)C(=O)c2ccc(c(c2)CNC)Oc3ccc(cc3)Cl
+      sub1   : [R1]C1CC1
+      sub2   : [R1]C1CCCC1
+      class  : -1
+
+      pd_idx : 1533
+      id     : CHEMBL257221-CHEMBL409877
+      core   : [R1]C(=O)c1ccc(c(c1)CNC)Oc2ccc(c(c2)C)SC
+      sub1   : [R1]N1CCN(CC1)C2CC2
+      sub2   : [R1]N1CCCN(CC1)C2CC2
+      class  : -1
+
+      pd_idx : 1541
+      id     : CHEMBL404247-CHEMBL257743
+      core   : [R1]N1CCN(CC1)C(=O)c2ccc(c(c2)CNC)Oc3ccc(cc3)Cl
+      sub1   : [R1]C1CC1
+      sub2   : [R1]C1CCC1
+      class  : -1
+
+      pd_idx : 1545
+      id     : CHEMBL402644-CHEMBL258153
+      core   : [R1]N1CCN(CC1)C(=O)c2ccc(c(c2)CNC)Oc3ccc(c(c3)Cl)Cl
+      sub1   : [R1]C1CC1
+      sub2   : [R1]C1CCC1
+      class  : -1
+
+      pd_idx : 1547
+      id     : CHEMBL267267-CHEMBL270625
+      core   : [R1]C(=O)c1ccc(c(c1)CNC)Oc2ccc(cc2)SC
+      sub1   : [R1]N1CCN(CC1)C(C)C
+      sub2   : [R1]N1CCCN(CC1)C(C)C
+      class  : -1
+
+      pd_idx : 1549
+      id     : CHEMBL272503-CHEMBL408206
+      core   : [R1]C(=O)c1ccc(c(c1)CNC)Oc2ccc(c(c2)Cl)Cl
+      sub1   : [R1]N1CCN(CC1)C(C)C
+      sub2   : [R1]N1CCCN(CC1)C(C)C
+      class  : -1
+
+      pd_idx : 1572
+      id     : CHEMBL370169-CHEMBL427177
+      core   : [R1]Cc1ccc(cc1)OC2CCN(CC2)C(C)C
+      sub1   : [R1]N1CCCC1
+      sub2   : [R1]N1CCCCCC1
+      class  : -1
+
+      pd_idx : 1585
+      id     : CHEMBL373860-CHEMBL441705
+      core   : [R1]N1CCN(CC1)C(=O)N2Cc3ccccc3C2
+      sub1   : [R1]C1CC1
+      sub2   : [R1]C1CCCC1
+      class  : -1
+
+      pd_idx : 1651
+      id     : CHEMBL398981-CHEMBL441137
+      core   : [R1]CCC#Cc1ccc(c(c1)CNC)Oc2ccc(cc2)SC
+      sub1   : [R1]N1CCCN(CC1)C(C)C
+      sub2   : [R1]N1CCN(CC1)C(C)C
+      class  : -1
+
+      pd_idx : 1653
+      id     : CHEMBL402644-CHEMBL402590
+      core   : [R1]N1CCN(CC1)C(=O)c2ccc(c(c2)CNC)Oc3ccc(c(c3)Cl)Cl
+      sub1   : [R1]C1CC1
+      sub2   : [R1]C1CCCC1
+      class  : -1
+
+      pd_idx : 1699
+      id     : CHEMBL557718_CHEMBL560386_CHEMBL562722-CHEMBL550050
+      core   : [R1]CCCOc1ccc(cc1)C2C(S(=O)(=O)c3cccc(c3O2)OC)C
+      sub1   : [R1]N1CCCC1
+      sub2   : [R1]N1CCCCC1
+      class  : -1
+
+    All rows containing Nan was deleted

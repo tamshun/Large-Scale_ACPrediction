@@ -1,0 +1,199 @@
+Target name: CHEMBL4581
+
+
+--- Whole dataset stats---
+#data: 18
+#ac: 1
+#non-ac: 17
+#MMS: 5
+
+
+pKd_max: 8.46
+pKd_ave: 6.35
+pKd_min: 5.28
+pKd_thres: 1.800
+
+
+#HA_max: 35.00
+#HA_ave: 27.92
+#HA_min: 21.00
+
+
+MW_max: 490.66
+MW_ave: 391.33
+MW_min: 298.24
+
+
+#HA_sub1_max: 10.00
+#HA_sub1_ave: 7.06
+#HA_sub1_min: 3.00
+
+
+#HA_sub2_max: 10.00
+#HA_sub2_ave: 6.00
+#HA_sub2_min: 2.00
+
+
+--- Stats by MMS---
+
+
+--- cid: 0---
+#data: 6
+#ac: 1
+#non-ac: 5
+#MMS: 1
+
+
+pKi_max: 7.15
+pKi_ave: 6.40
+pKi_min: 5.28
+
+
+#HA_max: 30.00
+#HA_ave: 26.80
+#HA_min: 23.00
+
+
+MW_max: 420.52
+MW_ave: 374.50
+MW_min: 319.46
+
+
+#HA_sub1_max: 10.00
+#HA_sub1_ave: 6.50
+#HA_sub1_min: 3.00
+
+
+#HA_sub2_max: 10.00
+#HA_sub2_ave: 6.33
+#HA_sub2_min: 3.00
+
+
+--- cid: 1---
+#data: 1
+#ac: 0
+#non-ac: 1
+#MMS: 2
+
+
+pKi_max: 8.46
+pKi_ave: 8.26
+pKi_min: 8.06
+
+
+#HA_max: 22.00
+#HA_ave: 21.50
+#HA_min: 21.00
+
+
+MW_max: 334.29
+MW_ave: 316.26
+MW_min: 298.24
+
+
+#HA_sub1_max: 3.00
+#HA_sub1_ave: 3.00
+#HA_sub1_min: 3.00
+
+
+#HA_sub2_max: 4.00
+#HA_sub2_ave: 4.00
+#HA_sub2_min: 4.00
+
+
+--- cid: 2---
+#data: 3
+#ac: 0
+#non-ac: 3
+#MMS: 3
+
+
+pKi_max: 6.92
+pKi_ave: 6.29
+pKi_min: 5.28
+
+
+#HA_max: 28.00
+#HA_ave: 26.00
+#HA_min: 23.00
+
+
+MW_max: 391.53
+MW_ave: 358.97
+MW_min: 319.46
+
+
+#HA_sub1_max: 9.00
+#HA_sub1_ave: 7.67
+#HA_sub1_min: 7.00
+
+
+#HA_sub2_max: 8.00
+#HA_sub2_ave: 6.33
+#HA_sub2_min: 4.00
+
+
+--- cid: 3---
+#data: 7
+#ac: 0
+#non-ac: 7
+#MMS: 4
+
+
+pKi_max: 6.92
+pKi_ave: 6.11
+pKi_min: 5.76
+
+
+#HA_max: 35.00
+#HA_ave: 31.40
+#HA_min: 27.00
+
+
+MW_max: 490.66
+MW_ave: 439.97
+MW_min: 377.50
+
+
+#HA_sub1_max: 10.00
+#HA_sub1_ave: 8.00
+#HA_sub1_min: 5.00
+
+
+#HA_sub2_max: 9.00
+#HA_sub2_ave: 6.43
+#HA_sub2_min: 2.00
+
+
+--- cid: 4---
+#data: 1
+#ac: 0
+#non-ac: 1
+#MMS: 5
+
+
+pKi_max: 6.70
+pKi_ave: 6.28
+pKi_min: 5.87
+
+
+#HA_max: 32.00
+#HA_ave: 30.00
+#HA_min: 28.00
+
+
+MW_max: 439.57
+MW_ave: 416.53
+MW_min: 393.50
+
+
+#HA_sub1_max: 6.00
+#HA_sub1_ave: 6.00
+#HA_sub1_min: 6.00
+
+
+#HA_sub2_max: 2.00
+#HA_sub2_ave: 2.00
+#HA_sub2_min: 2.00
+
+

@@ -65,13 +65,6 @@ class FullyConnectedNN(nn.Module):
         signal = self.linear_relu_stack(x)
         return signal    
 
-class MPNN(nn.Module):
-    
-    def __init__(self):
-        super().__init__()
-        
-    def forward(self):
-        pass
     
 class Classification(Base_wodirection):
 
@@ -151,9 +144,9 @@ class Classification(Base_wodirection):
         adam_lr      = trial.suggest_log_uniform('adam_lr', 1e-4, 1e-2)
         batch_size   = trial.suggest_categorical('batch_size', [64, 128, 256])
         
-        loss_fn   = nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adam(lr=adam_lr)
-        model     = FullyConnectedNN(nbits, hidden_nodes, drop_rate).to(device)
+        loss_fn      = nn.CrossEntropyLoss()
+        optimizer    = torch.optim.Adam(lr=adam_lr)
+        model        = FullyConnectedNN(nbits, hidden_nodes, drop_rate).to(device)
         
         X_tr, X_vl, y_tr, y_vl = train_test_split(trX, trY, test_size=0.2, random_state=42, shuffle=True, stratify=trY)
         dataloader_tr = dataloader(Dataset(fpset=X_tr, label=y_tr), batch_size=batch_size)
@@ -194,7 +187,7 @@ class Classification(Base_wodirection):
         return pred_score.cpu().detach().numpy(), pred.cpu().detach().numpy()
     
     
-    def _AllMMSPred(self, target, path_log):
+    def _AllMMSPred(self, target):
         
         # Initialize
         log = defaultdict(list) 
@@ -260,12 +253,10 @@ if __name__ == "__main__":
         target = sr['target']
         
         p = Classification(modeltype   = mtype,
-                        model       = model,
-                        dir_log     = "./Log/%s" %(model+'_'+mtype),
-                        dir_score   = "./Score/%s" %(model+'_'+mtype),
-                        interpreter = "shap",
-                        aconly      = False,
-                        )
+                           model       = model,
+                           dir_log     = "./Log/%s" %(model+'_'+mtype),
+                           dir_score   = "./Score/%s" %(model+'_'+mtype),
+                          )
 
         p.run(target=target, debug=True)
         # p.GetScore(t="Thrombin")

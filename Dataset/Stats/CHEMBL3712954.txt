@@ -1,0 +1,103 @@
+Target name: CHEMBL3712954
+
+
+--- Whole dataset stats---
+#data: 34
+#ac: 0
+#non-ac: 34
+#MMS: 2
+
+
+pKd_max: 4.94
+pKd_ave: 4.64
+pKd_min: 4.11
+pKd_thres: 0.690
+
+
+#HA_max: 40.00
+#HA_ave: 39.00
+#HA_min: 38.00
+
+
+MW_max: 662.44
+MW_ave: 569.71
+MW_min: 534.67
+
+
+#HA_sub1_max: 11.00
+#HA_sub1_ave: 9.35
+#HA_sub1_min: 1.00
+
+
+#HA_sub2_max: 11.00
+#HA_sub2_ave: 9.21
+#HA_sub2_min: 3.00
+
+
+--- Stats by MMS---
+
+
+--- cid: 0---
+#data: 3
+#ac: 0
+#non-ac: 3
+#MMS: 1
+
+
+pKi_max: 4.72
+pKi_ave: 4.66
+pKi_min: 4.59
+
+
+#HA_max: 40.00
+#HA_ave: 39.33
+#HA_min: 38.00
+
+
+MW_max: 562.73
+MW_ave: 553.38
+MW_min: 534.67
+
+
+#HA_sub1_max: 3.00
+#HA_sub1_ave: 1.67
+#HA_sub1_min: 1.00
+
+
+#HA_sub2_max: 3.00
+#HA_sub2_ave: 3.00
+#HA_sub2_min: 3.00
+
+
+--- cid: 1---
+#data: 31
+#ac: 0
+#non-ac: 31
+#MMS: 2
+
+
+pKi_max: 4.94
+pKi_ave: 4.64
+pKi_min: 4.11
+
+
+#HA_max: 40.00
+#HA_ave: 39.00
+#HA_min: 38.00
+
+
+MW_max: 662.44
+MW_ave: 569.71
+MW_min: 534.67
+
+
+#HA_sub1_max: 11.00
+#HA_sub1_ave: 10.10
+#HA_sub1_min: 9.00
+
+
+#HA_sub2_max: 11.00
+#HA_sub2_ave: 9.81
+#HA_sub2_min: 9.00
+
+

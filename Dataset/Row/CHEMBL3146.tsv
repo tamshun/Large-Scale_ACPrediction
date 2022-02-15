@@ -1,0 +1,2 @@
+nonstereo_aromatic_smiles	accession	standard_type	organism	lower_pPot_lim	pPot_mean	upper_pPot_lim	chembl_cid	chembl_tid
+CC1CCC2C(C)(C)C(O)CCC2(C)C12Cc1c(O)cc(C=O)c(C=O)c1O2	Q11128	Kd	Homo sapiens		4.9919222440242725		CHEMBL1170899	CHEMBL3146

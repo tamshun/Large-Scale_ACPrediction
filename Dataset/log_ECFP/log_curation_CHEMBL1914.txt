@@ -1,0 +1,38 @@
+--- Original data load ---
+    # Original data : 105
+--- Calclate ECFP ---
+    # Loaded cpds : 105
+    Diameter      : 4
+    nbits         : unfold
+--- Delete low level hash ---
+    # Loaded cpds    : 105
+    Deleted diameter : 0
+    nbits            : unfold
+--- Delete MMPs with Nan ---
+    No Nan was found.
+    All rows containing Nan was deleted
+--- Assign new hash values to unfolded hash ---
+    # Loaded cpds : 105
+    # calculated ecfp : 105
+--- Delete MMPs with Nan ---
+    No Nan was found.
+    All rows containing Nan was deleted
+--- Apply substructure difference ---
+    # Loaded cpds : 105
+--- Delete MMPs with Nan ---
+    Nan was found!
+      pd_idx : 6
+      id     : CHEMBL3116283-CHEMBL3116284
+      core   : [R1]CCn1c2ccccc2c(n1)OCc3cccc4c3cccc4
+      sub1   : [R1]N1CCCC1
+      sub2   : [R1]N1CCCCC1
+      class  : -1
+
+      pd_idx : 61
+      id     : CHEMBL481153-CHEMBL481154
+      core   : [R1]CCOC(=O)N1c2ccccc2Sc3c1cccc3
+      sub1   : [R1]N1CCCCC1
+      sub2   : [R1]N1CCCC1
+      class  : -1
+
+    All rows containing Nan was deleted
