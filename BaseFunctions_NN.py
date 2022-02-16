@@ -514,7 +514,7 @@ class Base_wodirection():
         pass
     
     
-    def _AllMMSPred(self, target, path_log):
+    def _AllMMSPred(self, target):
         
         '''
         main scripts
