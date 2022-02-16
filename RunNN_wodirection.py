@@ -4,28 +4,25 @@ Created on Thu Jun 11 14:09:59 2020
 
 @author: Tamura
 """
-from operator import neg
 import pandas as pd
 import numpy as np
-import sys
 import os
-import matplotlib.pyplot as plt
 import optuna
 import torch
+import json
 from torch                             import nn
 from torch.utils.data                  import dataloader
-from torch.nn.modules.container        import Sequential
-from Tools.ReadWrite                   import ToJson
-from Tools.utils                       import BasicInfo
 from collections                       import OrderedDict, defaultdict
-from Fingerprint.Hash2BitManager       import Hash2Bits, FindBitLength
-from functools                         import partial
 from collections                       import defaultdict, OrderedDict
 from sklearn.model_selection           import train_test_split
 from sklearn.metrics                   import roc_auc_score
 from .BaseFunctions                    import Base_wodirection
 
-
+def ToJson(obj, path):
+    
+    f = open(path, 'w')
+    json.dump(obj,f)
+    
 class Dataset(torch.utils.data.Dataset):
     
     def __init__(self, fpset, label):
@@ -239,12 +236,12 @@ class Classification(Base_wodirection):
 
 if __name__ == "__main__":
     
-    bd    = "/home/tamuras0/work/ACPredCompare/"
+    bd    = "/home/tamuras0/work/"
     model = "FCNN"
     mtype = "wodirection"
     os.chdir(bd)
-    os.makedirs("./Log", exist_ok=True)
-    os.makedirs("./Score", exist_ok=True)
+    os.makedirs("./Log_%s"%mtype, exist_ok=True)
+    os.makedirs("./Score_%s"%mtype, exist_ok=True)
     
     tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
     
@@ -254,18 +251,14 @@ if __name__ == "__main__":
         
         p = Classification(modeltype   = mtype,
                            model       = model,
-                           dir_log     = "./Log/%s" %(model+'_'+mtype),
-                           dir_score   = "./Score/%s" %(model+'_'+mtype),
+                           dir_log     = "./Log_%s/%s" %(mtype, model),
+                           dir_score   = "./Score_%s/%s" %(mtype, model),
                           )
 
         p.run(target=target, debug=True)
         # p.GetScore(t="Thrombin")
         
-        #TODO
-        #function for fw should be independent.
-        #This file should concentrate on fit/predict
-        #Make another scriptto calculate fw.
-        #Also funcs for calc score should be independent.
+        
         
 
     
