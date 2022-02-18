@@ -20,7 +20,7 @@ from collections                       import OrderedDict, defaultdict
 from collections                       import defaultdict, OrderedDict
 from sklearn.model_selection           import StratifiedKFold
 from sklearn.metrics                   import roc_auc_score
-from BaseFunctions_NN                  import Base_wodirection
+from BaseFunctions_NN                  import Base_wodirection_CGR
 
 import random
 from nn_utils import *
@@ -162,9 +162,9 @@ class BatchMolGraph:
     - a2a: (Optional): A mapping from an atom index to neighboring atom indices.
     """
 
-    def __init__(self, mol_graphs: List[MolGraph], args: Namespace):
+    def __init__(self, mol_graphs: list[MolGraph]):
         
-        self.args = args
+        #self.args = args
         self.masks = []
         self.smiles_batch = []
         self.mol_graphs = mol_graphs
@@ -256,6 +256,12 @@ class BatchMolGraph:
 class Dataset(torch.utils.data.Dataset):
     
     def __init__(self, smi_list, label_list):
+        
+        if not isinstance(smi_list, list):
+            smi_list = smi_list.tolist()
+        if not isinstance(label_list, list):
+            label_list = label_list.tolist()
+            
         self.smi_list   = smi_list
         self.label_list = label_list
         
@@ -263,7 +269,7 @@ class Dataset(torch.utils.data.Dataset):
         return self.y.shape[0]
 
     def __getitem__(self, idx):
-        return self.smi_list[idx], self.label_list[idx]
+        return [MolGraph(s) for s in self.smi_list[idx]], self.label_list[idx]
   
     
 def mycollate_fn(batch):
@@ -285,7 +291,7 @@ def mycollate_fn(batch):
 class MPNEncoder(nn.Module):
     """A message passing neural network for encoding a molecule."""
 
-    def __init__(self, args: Namespace, weight_seed=1):
+    def __init__(self, args: dict, weight_seed=1):
         """Initializes the MPNEncoder.
         :param args: Arguments.
         :param atom_fdim: Atom features dimension.
@@ -300,25 +306,24 @@ class MPNEncoder(nn.Module):
         
         self.args     = args
         self.act_func = nn.ReLU()
-        self.depth    = args.depth
-        self.W_i      = nn.Linear(ATOM_FDIM, args.dim)
-        self.W_o      = nn.Linear(args.dim*2, args.dim)
+        self.depth    = args['ConvNum']
+        self.W_i      = nn.Linear(ATOM_FDIM, args['dim'])
+        self.W_o      = nn.Linear(args['dim']*2, args['dim'])
         
-        w_h_input_size = args.dim + BOND_FDIM
-        modulList      = [self.act_func, nn.Linear(w_h_input_size, args.dim)]
+        w_h_input_size = args['dim'] + BOND_FDIM
+        modulList      = [self.act_func, nn.Linear(w_h_input_size, args['dim'])]
         
-        for d in range(args.agg_depth):
-            modulList.extend([self.act_func, nn.Linear(args.dim, args.dim)])
+        for d in range(args['agg_depth']):
+            modulList.extend([self.act_func, nn.Linear(args['dim'], args['dim'])])
        
         for i in range(args.depth):
             exec(f"self.W_h{i} = nn.Sequential(*modulList)")
             
-        self_module = [nn.Linear(ATOM_FDIM, args.dim), self.act_func]
-        for d in range(args.agg_depth):
-            self_module.extend([nn.Linear(args.dim, args.dim), self.act_func])
+        self_module = [nn.Linear(ATOM_FDIM, args['dim']), self.act_func]
+        for d in range(args['agg_depth']):
+            self_module.extend([nn.Linear(args['dim'], args['dim']), self.act_func])
             
         self.W_ah = nn.Sequential(*self_module)
-        
 
 
     def forward(self, mol_graph):
@@ -372,7 +377,7 @@ class MPNEncoder(nn.Module):
 
 class DeepNeuralNetwork(nn.Module):
     
-    def __init__(self, arg, hidden_list, random_seed=0):
+    def __init__(self, arg, random_seed=0):
         
         super(DeepNeuralNetwork, self).__init__()
         torch.manual_seed(random_seed)
@@ -380,6 +385,7 @@ class DeepNeuralNetwork(nn.Module):
         random.seed(random_seed)
         np.random.seed(random_seed)
         
+        hidden_list  = arg['node_list']
         W_list       = [nn.Linear(hidden_list[0], hidden_list[1], bias=True)]
         self.dropout = nn.Dropout(p=arg['dropout'])
         self.active_function = nn.ReLU()
@@ -394,7 +400,7 @@ class DeepNeuralNetwork(nn.Module):
         return self.W(x)  
     
     
-class Classification(Base_wodirection):
+class Classification(Base_wodirection_CGR):
 
     def __init__(self, modeltype, model, dir_log, dir_score, args, node_list, data, debug=False):
 
@@ -428,33 +434,41 @@ class Classification(Base_wodirection):
             
         return epoch
     
-    def predict(self, mpn, dnn, X):
+    def predict(self, X):
         
-        out  = mpn(X)
-        pred = self.output_act(dnn(out))
+        out  = self.mpn(X)
+        pred = self.output_act(self.dnn(out))
         
         return pred
     
     
-    def train(self, args, node_list, device, dataloader, verbose=10):
+    def train(self, args, device, dataloader, verbose=10):
         
-        mpn = MPNEncoder(args)
-        dnn = DeepNeuralNetwork(args, node_list)
+        self.mpn = MPNEncoder(args)
+        self.dnn = DeepNeuralNetwork(args)
+        
+        self.mpn.train()
+        self.dnn.train()
         
         if self.args.cuda:
-            mpn = mpn.cuda()
-            dnn = dnn.cuda()
+            self.mpn = self.mpn.cuda()
+            self.dnn = self.dnn.cuda()
             
         self.optimizer.zero_grad()
-        model.train()
         size = len(dataloader.dataset)
         
         for batch, (X, y) in enumerate(dataloader):
+            
+            X = BatchMolGraph(X)
             X, y = X.to(device), y.to(device)
             
             # Calculate loss
-            pred = self.predict(mpn, dnn, X)
-            loss = self.loss_fn(pred, y)
+            if self.args.cuda:
+                GroundTruth = GroundTruth.cuda()
+            
+            GroundTruth = torch.LongTensor(np.array(y))
+            prob = self.predict(X)
+            loss =  self.loss_fn(prob, GroundTruth)
             
             # back propagation
             loss.backward()
@@ -466,71 +480,74 @@ class Classification(Base_wodirection):
                 print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
                 
 
-    def test(self, model, device, dataloader):
+    def test(self, device, dataloader):
+        
+        self.mpn.eval()
+        self.dnn.eval()
         
         size = len(dataloader.dataset)
-        model.eval()
         threshold = torch.tensor([0.5])
         test_loss, correct = 0, 0
         
         with torch.no_grad():
             for X, y in dataloader:
+                X = BatchMolGraph(X)
                 X, y = X.to(device), y.to(device)
-                pred_score = model(X)
-                pred       = (pred_score>threshold).float()*1
-                test_loss += self.loss_fn(pred, y).item()
-                correct   += (pred.argmax(1) == y).type(torch.float).sum().item()
+                pred_score  = self.predict(X)
+                pred        = (pred_score>threshold).float()*1
+                
+                GroundTruth = torch.LongTensor(np.array(y))
+                if self.args.cuda:
+                    GroundTruth = GroundTruth.cuda()
+                
+                test_loss  +=  self.loss_fn(pred_score, GroundTruth)
+                correct    += (pred.argmax(1) == y).type(torch.float).sum().item()
                 
         test_loss /= size
         correct /= size
         print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
         
-        return pred_score.cpu().detach().numpy(), pred.cpu().detach().numpy()
+        return torch2numpy(pred_score), torch2numpy(pred)
 
             
     def objective(self, trial, trX, trY):
         
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         
-        train_num    = 100
-        batch_size   = 128 #trial.suggest_categorical('batch_size', [64, 128, 256])
-        lr           = 0.0001 #trial.suggest_log_uniform('adam_lr', 1e-4, 1e-2)
-        ConvNum      = trial.suggest_int('ConvNum', 2, 4)
-        DropRate     = trial.suggest_discrete_uniform('dropout', 0.1, 0.3, 0.05)
-        Dim          = int(trial.suggest_discrete_uniform("hidden_dim", 70, 100, 10))
-        step_num     = trial.suggest_int("step_num", 1, 3)
-        DNNLayerNum  = trial.suggest_int('DNNLayerNum', 2, 8)
-
-        step_size    = int(train_num/step_num)
-        grad_node    = int(Dim / DNNLayerNum)
-        dnn_list     = [Dim - grad_node*num for num in range(DNNLayerNum)] + [2]
-        args         = dict(depth     = ConvNum,
-                            agg_depth = 1, 
-                            dim       = Dim, 
-                            cuda      = True, 
-                            dropout   = DropRate, 
-                            gamma     = 0.1, 
-                            lr        = lr,
-                            step_size = step_size,
-                            dnn_list  = dnn_list
-                            )
+        args = dict(
+                    train_num    = 100,
+                    batch_size   = 128, #trial.suggest_categorical('batch_size', [64, 128, 256])
+                    lr           = 0.0001, #trial.suggest_log_uniform('adam_lr', 1e-4, 1e-2)
+                    ConvNum      = trial.suggest_int('ConvNum', 2, 4), #depth
+                    dropout      = trial.suggest_discrete_uniform('dropout', 0.1, 0.3, 0.05),
+                    dim          = int(trial.suggest_discrete_uniform("dim", 70, 100, 10)),#hidden_dim
+                    step_num     = trial.suggest_int("step_num", 1, 3),
+                    DNNLayerNum  = trial.suggest_int('DNNLayerNum', 2, 8),                    
+                    agg_depth    = 1,
+                    cuda         = True,
+                    gamma        = 0.1,
+                    )
         
-        EPOCH        = self.n_epoch[0]
+        args['step_size'] = int(args['train_num']/args['step_num'])
+        args['grad_node'] = int(args['Dim'] / args['DNNLayerNum'])
+        args['node_list'] = [args['dim'] - args['grad_node']*num for num in range(args['DNNLayerNum'])] + [2]
         
         # Set up dataloader
-        dataset       = Dataset(fpset=trX, label=trY)
+        dataset       = Dataset(smi_list=trX, label_list=trY)
         kfold         = StratifiedKFold(n_splits=self.nfold, shuffle=True, random_state=0)
         score_cv      = []
+        
         for _fold, (idx_tr, idx_vl) in enumerate(kfold.split(trX, trY)):
             dataset_tr    = Subset(dataset, idx_tr)
-            dataloader_tr = DataLoader(dataset_tr, batch_size, shuffle=True)
+            dataloader_tr = DataLoader(dataset_tr, args['batch_size'], shuffle=True)
             dataset_vl    = Subset(dataset, idx_vl)
-            dataloader_vl = DataLoader(dataset_vl, batch_size, shuffle=False)
+            dataloader_vl = DataLoader(dataset_vl, args['batch_size'], shuffle=False)
         
         # training
+        EPOCH = self.n_epoch[0]
         for step in range(EPOCH):
-            self.train(model, device, dataloader_tr)
-            predY_score, predY = self.test(model, device, dataloader_vl)
+            self.train(args, device, dataloader_tr)
+            predY_score, predY = self.test(device, dataloader_vl)
             score = roc_auc_score(y_true=trY[idx_vl], y_score=predY_score)
             #print(f"AUCROC: {(score):>0.5f}\n")
             
@@ -540,33 +557,28 @@ class Classification(Base_wodirection):
 
     def _fit_bestparams(self, args, trX, trY):
         
-        self.mpn        = MPNEncoder(args)
-        self.dnn        = DeepNeuralNetwork(args, node_list)
-        
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         
-        EPOCH         = self.n_epoch[1]
+        EPOCH = self.n_epoch[1]
         
-        dataloader_tr = dataloader(Dataset(fpset=trX, label=trY), batch_size=args['batch_size'])
+        dataloader_tr = dataloader(Dataset(smi_list=trX, label_list=trY), batch_size=args['batch_size'])
         
         for step in range(EPOCH):
-            self.train(model, device, dataloader_tr)
+            self.train(args, device, dataloader_tr)
             
-        return model
 
-    def _predict_bestparams(self, model, tsX, tsY):
+    def _predict_bestparams(self, tsX, tsY):
         
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         
-        dataloader_ts = dataloader(Dataset(fpset=tsX, label=tsY))
-        loss_fn       = nn.CrossEntropyLoss()
+        dataloader_ts = dataloader(Dataset(smi_list=tsX, label_list=tsY))
         
-        pred_score, pred = self.test(model, device, loss_fn, dataloader_ts)
+        pred_score, pred = self.test(device, dataloader_ts)
         
-        return pred_score.cpu().detach().numpy(), pred.cpu().detach().numpy()
+        return torch2numpy(pred_score), torch2numpy(pred)
     
     
-    def _AllMMSPred(self, target, path_log):
+    def _AllMMSPred(self, target):
         
         # Initialize
         log = defaultdict(list) 
@@ -579,31 +591,37 @@ class Classification(Base_wodirection):
             
             # Train test split
             print("    $ Prediction for cid%d is going on.\n" %cid)
-            tr, ts, df_trX, df_trY, df_tsX, df_tsY, trX, trY, tsX, tsY = self._GetMatrices(cid)
+            tr, ts, df_trX, df_tsX = self._GetTrainTest(cid)
+            trX, trY = df_trX[self.col], tr['class'].to_numpy()
+            tsX, tsY = df_tsX[self.col], ts['class'].to_numpy()
             
             # Fit and Predict
             study = optuna.create_study()
             study.optimize(self.objective, n_trials=100)
             
-            ml = self._fit_bestparams(study.best_params, trX, trY)
-            score, predY = self._predict_bestparams(ml, tsX, tsY)
+            self._fit_bestparams(study.best_params, trX, trY)
+            score, predY = self._predict_bestparams(tsX, tsY)
             print("    $ Prediction Done.\n")
             
             # Write & save log
-            log = self._WriteLog(log, ml, cid, ts, tsX, tsY, predY, score)           
-            self._Save(target, cid, log, ml, study)
+            log = self._WriteLog(log, cid, tr, ts, tsX, tsY, predY, score)           
+            self._Save(target, cid, log, study)
             print("    $  Log is out.\n")
             
             
-    def _WriteLog(self, log, ml, cid, ts, tsX, tsY, predY, score):
+    def _WriteLog(self, log, ml, cid, tr, ts, tsX, tsY, predY, score):
         
         # Write log
         tsids         = ts["id"].tolist()
         log["ids"]   += tsids
         log["cid"]   += [cid] * len(tsids)
+        log['#tr']   += [tr.shape[0]] * len(tsids)
+        log['#ac_tr']+= [tr[tr['class']==1].shape[0]] * len(tsids)
         log["trueY"] += tsY.tolist()
         log["predY"] += predY.tolist()
         log["prob"]  += score
+        
+        return log
         
         
     def _Save(self, target, cid, log, ml, study):
@@ -612,7 +630,8 @@ class Classification(Base_wodirection):
         self.log.to_csv(path_log, sep="\t")
 
         ToJson(study.best_params, self.modeldir+"/params_%s_trial%d.json" %(target, cid))
-        torch.save(ml.to('cpu').state_dict(), self.modeldir+"/model_%s_trial%d.pth" %(target, cid))
+        torch.save(self.mpn.to('cpu').state_dict(), self.modeldir+"/mpn_%s_trial%d.pth" %(target, cid))
+        torch.save(self.dnn.to('cpu').state_dict(), self.modeldir+"/dnn_%s_trial%d.pth" %(target, cid))
         print("    $  Log is out.\n")
 
 
