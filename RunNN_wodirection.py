@@ -222,6 +222,7 @@ class Classification(Base_wodirection):
         log["predY"] += predY.tolist()
         log["prob"]  += score
         
+        return log
         
     def _Save(self, target, cid, log, ml, study):
         path_log = os.path.join(self.logdir, "%s_trial%d.tsv" %(target, cid))
