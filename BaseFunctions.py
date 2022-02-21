@@ -54,12 +54,17 @@ class Base_wodirection():
             self.data_split_generator = LeaveOneCoreOut(self.main)
             self.testsetidx           = self.data_split_generator.keys()
             self.del_leak             = True
+            self.predictable          = True
         
         elif self.trtssplit == 'trtssplit':
             # Stratified Shuffled split
-            self.data_split_generator = MultipleTrainTestSplit(self.main, n_dataset=3)
-            self.testsetidx           = self.data_split_generator.keys()
-            self.del_leak             = False
+            if self._IsPredictableSet():
+                self.data_split_generator = MultipleTrainTestSplit(self.main, n_dataset=3)
+                self.testsetidx           = self.data_split_generator.keys()
+                self.del_leak             = False
+                self.predictable          = True
+            else:
+                self.predictable          = False
 
         
     def _ReadDataFile(self, target, acbits=False):
@@ -157,7 +162,12 @@ class Base_wodirection():
         self.main, self.ecfp = self._ReadDataFile(target, acbits=self.aconly)
         
         self._SetParams()
-        self._AllMMSPred(target)
+        
+        if self._IsPredictableSet():
+            self._AllMMSPred(target)
+            
+        else:
+            print('    $ %s is skipped because of lack of the actives' %target)
         
         
     def run_parallel(self, target_list, njob=-1):
@@ -197,7 +207,10 @@ class Base_wodirection():
         
         return bool(n_tr * n_ts * n_pos_tr)         
     
-                
+    def _IsPredictableSet(self):
+        bool_nac = np.where(self.main['class']==1)[0].shape[0] > 1
+        return bool_nac
+                    
     def _SetML(self):
         
         '''

@@ -464,7 +464,12 @@ class Base_wodirection():
         self.main, self.ecfp = self._ReadDataFile(target, acbits=self.aconly)
         
         self._SetParams()
-        self._AllMMSPred(target)
+        
+        if self._IsPredictableSet():
+            self._AllMMSPred(target)
+            
+        else:
+            print('    $ %s is skipped because of lack of the actives' %target)
         
         
     def run_parallel(self, target_list, njob=-1):
@@ -502,7 +507,11 @@ class Base_wodirection():
         n_ts = bool(ts.shape[0] > 0) 
         n_pos_tr = bool(tr[tr['class']==1].shape[0] >= min_npos)
         
-        return bool(n_tr * n_ts * n_pos_tr)         
+        return bool(n_tr * n_ts * n_pos_tr)   
+    
+    def _IsPredictableSet(self):
+        bool_nac = np.where(self.main['class']==1)[0].shape[0] > 1
+        return bool_nac      
     
                 
     def _SetML(self):
@@ -627,7 +636,12 @@ class Base_wodirection_CGR():
         self.main, self.cgr = self._ReadDataFile(target, acbits=self.aconly)
         
         self._SetParams()
-        self._AllMMSPred(target)
+        
+        if self._IsPredictableSet():
+            self._AllMMSPred(target)
+            
+        else:
+            print('    $ %s is skipped because of lack of the actives' %target)
         
         
     def run_parallel(self, target_list, njob=-1):
@@ -667,6 +681,10 @@ class Base_wodirection_CGR():
         
         return bool(n_tr * n_ts * n_pos_tr)         
     
+    
+    def _IsPredictableSet(self):
+        bool_nac = np.where(self.main['class']==1)[0].shape[0] > 1
+        return bool_nac
                 
     def _SetML(self):
         

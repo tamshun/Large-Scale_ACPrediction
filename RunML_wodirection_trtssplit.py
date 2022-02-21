@@ -136,27 +136,27 @@ if __name__ == '__main__':
     else:
         bd    = "/home/tamuras0/work/ACPredCompare/"
         
-    model = "SVM"
+    model = "XGBoost"
     
     mtype = "wodirection_trtssplit"
     os.chdir(bd)
-    os.makedirs("./Log"  , exist_ok=True)
-    os.makedirs("./Score", exist_ok=True)
+    os.makedirs("./Log_%s"%mtype  , exist_ok=True)
+    os.makedirs("./Score_%s"%mtype, exist_ok=True)
     
     tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
     
     p = Classification(modeltype   = mtype,
-                           model       = model,
-                           dir_log     = "./Log_%s/%s" %(mtype, model),
-                           dir_score   = "./Score_%s/%s" %(mtype, model)
-                           )
+                       model       = model,
+                       dir_log     = "./Log_%s/%s" %(mtype, model),
+                       dir_score   = "./Score_%s/%s" %(mtype, model)
+                       )
     
     # for i, sr in tlist.iterrows():
         
     #     target = sr['chembl_tid']
-    #     p.run(target=target, debug=False)
+    #     p.run(target=target, debug=True)
     
     print(' $ %s is selected as machine learning method'%model)    
-    p.run_parallel(tlist['chembl_tid'], njob=5)
+    p.run_parallel(tlist['chembl_tid'], njob=-1)
     
  
