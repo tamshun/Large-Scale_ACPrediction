@@ -561,9 +561,6 @@ class Base_wodirection_CGR():
 
 
     def _SetParams(self):
-
-        self.nbits_c = FindBitLength(self.ecfp, [self.col[0]])
-        self.nbits_s = FindBitLength(self.ecfp, self.col[1:] )
         
         if self.trtssplit == 'LOCO':
             # Leave One Core Out
@@ -635,9 +632,8 @@ class Base_wodirection_CGR():
         
         self.main, self.cgr = self._ReadDataFile(target, acbits=self.aconly)
         
-        self._SetParams()
-        
         if self._IsPredictableSet():
+            self._SetParams()
             self._AllMMSPred(target)
             
         else:

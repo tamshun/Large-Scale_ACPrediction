@@ -2,22 +2,22 @@ import pandas as pd
 import numpy as np
 import sys
 import os
-import matplotlib.pyplot as plt
 import optuna
 import torch
 from torch                             import nn
-from torch.utils.data                  import dataloader
-from torch_geometric.data              import DataLoader, Subset
+from torch.utils.data                  import dataloader, Subset, DataLoader
+#from torch_geometric.data              import DataLoader
 from Tools.ReadWrite                   import ToJson
 from collections                       import defaultdict
 from sklearn.metrics                   import roc_auc_score
-from GCN.MolGraph                      import MolGraph
 from sklearn.model_selection           import StratifiedKFold
 from sklearn.metrics                   import roc_auc_score
 from BaseFunctions_NN                  import Base_wodirection_CGR
 import random
 from functools import partial
-import rdkit.Chem as Chem
+from rdkit import Chem
+from argparse import Namespace
+
 
 
 ELEM_LIST = list(range(1,119))
@@ -91,7 +91,7 @@ class MolGraph:
     - b2revb: A mapping from a bond index to the index of the reverse bond.
     """
 
-    def __init__(self, smiles: str, args: Namespace, role=None):
+    def __init__(self, smiles: str, args=None, role=None):
         """
         Computes the graph structure and featurization of a molecule.
         :param smiles: A smiles string.
@@ -150,7 +150,7 @@ class BatchMolGraph:
     - a2a: (Optional): A mapping from an atom index to neighboring atom indices.
     """
 
-    def __init__(self, mol_graphs: list[MolGraph]):
+    def __init__(self, mol_graphs: list):
         
         #self.args = args
         self.masks = []
@@ -257,7 +257,8 @@ class Dataset(torch.utils.data.Dataset):
         return self.label_list.shape[0]
 
     def __getitem__(self, idx):
-        return [MolGraph(s) for s in self.smi_list[idx]], self.label_list[idx]
+        return MolGraph(self.smi_list[idx]), self.label_list[idx]
+        #return [MolGraph(s) for s in self.smi_list[idx]], self.label_list[idx]
   
     
 # def mycollate_fn(batch):
@@ -304,7 +305,7 @@ class MPNEncoder(nn.Module):
         for d in range(args['agg_depth']):
             modulList.extend([self.act_func, nn.Linear(args['dim'], args['dim'])])
        
-        for i in range(args.depth):
+        for i in range(args['ConvNum']):
             exec(f"self.W_h{i} = nn.Sequential(*modulList)")
             
         self_module = [nn.Linear(ATOM_FDIM, args['dim']), self.act_func]
@@ -390,7 +391,7 @@ class DeepNeuralNetwork(nn.Module):
     
 class Classification(Base_wodirection_CGR):
 
-    def __init__(self, modeltype, model, dir_log, dir_score, args, data, debug=False):
+    def __init__(self, modeltype, model, dir_log, dir_score, debug=False):
 
         super().__init__(modeltype, dir_log=dir_log, dir_score=dir_score, data_split_metric='trtssplit')
 
@@ -398,19 +399,7 @@ class Classification(Base_wodirection_CGR):
         self.mname     = model
         self.debug     = debug
         self.n_epoch   = self._set_nepoch()
-        
-        self.args       = args
-        weights         = torch.tensor([1.0, int(data[data["class"]==0].shape[0] / data[data["class"] ==1].shape[0])])
-        self.loss_fn    = nn.CrossEntropyLoss(weight=weights, reduction="sum")
-        self.output_act = nn.Softmax(dim=1)
-        
-        if self.args.cuda:
-            self.loss_fn    = self.loss_fn.cuda()
-            self.output_act = self.output_act.cuda()  
-            
-        opt_list       = list(self.mpn.parameters()) + list(self.dnn.parameters())
-        self.optimizer = torch.optim.Adam(opt_list, lr=args.lr)
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=args.step_size, gamma=args.gamma)
+        self.nfold     = 3
     
         
     def _set_nepoch(self):
@@ -421,6 +410,10 @@ class Classification(Base_wodirection_CGR):
             epoch = [50, 200]
             
         return epoch
+    
+    def _SetML(self):
+        
+        return super()._SetML()
     
     def predict(self, X):
         
@@ -438,7 +431,11 @@ class Classification(Base_wodirection_CGR):
         self.mpn.train()
         self.dnn.train()
         
-        if self.args.cuda:
+        opt_list       = list(self.mpn.parameters()) + list(self.dnn.parameters())
+        self.optimizer = torch.optim.Adam(opt_list, lr=args['lr'])
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=args['step_size'], gamma=args['gamma'])
+
+        if args['cuda']:
             self.mpn = self.mpn.cuda()
             self.dnn = self.dnn.cuda()
             
@@ -451,7 +448,7 @@ class Classification(Base_wodirection_CGR):
             X, y = X.to(device), y.to(device)
             
             # Calculate loss
-            if self.args.cuda:
+            if args.cuda:
                 GroundTruth = GroundTruth.cuda()
             
             GroundTruth = torch.LongTensor(np.array(y))
@@ -512,13 +509,23 @@ class Classification(Base_wodirection_CGR):
                     step_num     = trial.suggest_int("step_num", 1, 3),
                     DNNLayerNum  = trial.suggest_int('DNNLayerNum', 2, 8),                    
                     agg_depth    = 1,
-                    cuda         = True,
+                    cuda         = torch.cuda.is_available(),
                     gamma        = 0.1,
                     )
         
         args['step_size'] = int(args['train_num']/args['step_num'])
-        args['grad_node'] = int(args['Dim'] / args['DNNLayerNum'])
+        args['grad_node'] = int(args['dim'] / args['DNNLayerNum'])
         args['node_list'] = [args['dim'] - args['grad_node']*num for num in range(args['DNNLayerNum'])] + [2]
+        
+        weights         = torch.tensor([1.0, int(np.where(trY==-1)[0].shape[0] / np.where(trY==1)[0].shape[0])])
+        self.loss_fn    = nn.CrossEntropyLoss(weight=weights, reduction="sum")
+        self.output_act = nn.Softmax(dim=1)
+        
+        if args['cuda']:
+            self.loss_fn    = self.loss_fn.cuda()
+            self.output_act = self.output_act.cuda()  
+            
+
         
         # Set up dataloader
         dataset       = Dataset(smi_list=trX, label_list=trY)
@@ -531,15 +538,15 @@ class Classification(Base_wodirection_CGR):
             dataset_vl    = Subset(dataset, idx_vl)
             dataloader_vl = DataLoader(dataset_vl, args['batch_size'], shuffle=False)
         
-        # training
-        EPOCH = self.n_epoch[0]
-        for step in range(EPOCH):
-            self.train(args, device, dataloader_tr)
-            predY_score, predY = self.test(device, dataloader_vl)
-            score = roc_auc_score(y_true=trY[idx_vl], y_score=predY_score)
-            #print(f"AUCROC: {(score):>0.5f}\n")
-            
-        score_cv.append(score)
+            # training
+            EPOCH = self.n_epoch[0]
+            for step in range(EPOCH):
+                self.train(args, device, dataloader_tr)
+                predY_score, predY = self.test(device, dataloader_vl)
+                score = roc_auc_score(y_true=trY[idx_vl], y_score=predY_score)
+                #print(f"AUCROC: {(score):>0.5f}\n")
+                
+            score_cv.append(score)
             
         return np.mean(score_cv)
 
@@ -585,7 +592,8 @@ class Classification(Base_wodirection_CGR):
             
             # Fit and Predict
             study = optuna.create_study()
-            study.optimize(self.objective, n_trials=100)
+            obj = partial(self.objective, trX=trX, trY=trY)
+            study.optimize(obj, n_trials=100)
             
             self._fit_bestparams(study.best_params, trX, trY)
             score, predY = self._predict_bestparams(tsX, tsY)
@@ -625,7 +633,7 @@ class Classification(Base_wodirection_CGR):
 
 if __name__ == "__main__":
     
-    bd    = "/home/tamuras0/work/ACPredCompare/"
+    bd    = '/Users/tamura/work/ACPredCompare'#"/home/tamuras0/work/ACPredCompare/"
     model = "MPNN"
     mtype = "wodirection"
     os.chdir(bd)
@@ -638,11 +646,9 @@ if __name__ == "__main__":
                         model       = model,
                         dir_log     = "./Log/%s" %(model+'_'+mtype),
                         dir_score   = "./Score/%s" %(model+'_'+mtype),
-                        interpreter = "shap",
-                        aconly      = False,
                         )
     
     for i, sr in tlist.iterrows():
         
-        target = sr['target']
+        target = sr['chembl_tid']
         p.run(target=target, debug=True)
