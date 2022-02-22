@@ -19,6 +19,9 @@ from sklearn.model_selection           import StratifiedKFold
 from sklearn.metrics                   import roc_auc_score
 from BaseFunctions_NN                  import Base_wodirection
 
+def torch2numpy(x):
+    return x.to("cpu").detach().numpy().copy()
+
 def ToJson(obj, path):
     
     f = open(path, 'w')
@@ -55,7 +58,8 @@ class FullyConnectedNN(nn.Module):
             self.linear_relu_stack.add_module('dropout%d'%(i), nn.Dropout(drop_rate))
                 
         self.linear_relu_stack.add_module('l%d-out'%self.nlayer, nn.Linear(hidden_nodes[i], 1))
-        self.linear_relu_stack.add_module('sigmoid', nn.Sigmoid())
+        # self.linear_relu_stack.add_module('l%d-out'%self.nlayer, nn.Linear(hidden_nodes[i], 2))
+        #self.linear_relu_stack.add_module('softmax', nn.Softmax(dim=1))
         
     def forward(self, x):
         signal = self.linear_relu_stack(x)
@@ -117,12 +121,12 @@ def test(model, device, loss_fn, dataloader):
     return predY_score, predY
 
         
-def objective(trial, trX, trY, nfold):
+def objective(trial, trX, trY, nfold, nepoch):
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
     # parameter space
-    EPOCH        = 50
+    EPOCH        = nepoch
     nbits        = trX.shape[1]
     n_layer      = trial.suggest_int('n_layer', 2, 3)
     hidden_nodes = [int(trial.suggest_discrete_uniform("num_filter_"+str(i), 250, 2000, 250)) for i in range(n_layer)]
@@ -132,7 +136,8 @@ def objective(trial, trX, trY, nfold):
     
     # Create NN instance
     model     = FullyConnectedNN(nbits, hidden_nodes, drop_rate).to(device)
-    loss_fn   = nn.BCELoss()#nn.CrossEntropyLoss()
+    w_pos     = int(np.where(trY==0)[0].shape[0] / np.where(trY==1)[0].shape[0])
+    loss_fn   = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([w_pos]))#nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=adam_lr)
     
     # Set up dataloader
@@ -171,23 +176,25 @@ class Classification(Base_wodirection):
         self.model_name = model
         self.pred_type  = "classification"
         self.nfold      = 3
+        
     
     def _fit_bestparams(self, params, trX, trY):
         
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         
-        EPOCH         = 200
+        EPOCH         = self.nepoch[1]
         nbits         = trX.shape[1]
         model         = FullyConnectedNN(nbits=nbits,
                                          hidden_nodes=[int(params['num_filter_%d'%i]) for i in range(params['n_layer'])],
                                          drop_rate=params['drop_rate']
                                          )
         dataloader_tr = DataLoader(Dataset(fpset=trX, label=trY), shuffle=True, batch_size=params['batch_size'], num_workers=2)
-        loss_fn       = nn.BCELoss()
+        w_pos     = int(np.where(trY==0)[0].shape[0] / np.where(trY==1)[0].shape[0])
+        self.loss_fn   = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([w_pos]))
         optimizer     = torch.optim.Adam(model.parameters(), lr=params['adam_lr'])
         
         for step in range(EPOCH):
-            train(model, device, loss_fn, optimizer, dataloader_tr)
+            train(model, device, self.loss_fn, optimizer, dataloader_tr)
             
         return model
 
@@ -196,11 +203,10 @@ class Classification(Base_wodirection):
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         
         dataloader_ts = DataLoader(Dataset(fpset=tsX, label=tsY), shuffle=False, num_workers=2)
-        loss_fn       = nn.BCELoss()
         
-        pred_score, pred = test(model, device, loss_fn, dataloader_ts)
+        pred_score, pred = test(model, device, self.loss_fn, dataloader_ts)
         
-        return pred_score.cpu(), pred.cpu()
+        return pred_score, pred
     
     def _AllMMSPred(self, target):
         
@@ -224,8 +230,8 @@ class Classification(Base_wodirection):
                     # Fit and Predict
                     pruner = optuna.pruners.MedianPruner()
                     study = optuna.create_study(pruner=pruner, direction='maximize')
-                    objective_partial = partial(objective, trX=trX, trY=trY, nfold=self.nfold)
-                    study.optimize(objective_partial, n_trials=100) #NOTE!!!!
+                    objective_partial = partial(objective, trX=trX, trY=trY, nfold=self.nfold, nepoch=self.nepoch[0])
+                    study.optimize(objective_partial, n_trials=self.nepoch[2]) #NOTE!!!!
                     
                     ml = self._fit_bestparams(study.best_params, trX, trY)
                     score, predY = self._predict_bestparams(ml, tsX, tsY)
@@ -240,8 +246,8 @@ class Classification(Base_wodirection):
             
     def _WriteLog(self, log, trial, tr, ts, tsY, predY, score):
         
-        predY = predY.detach().numpy()
-        score = score.detach().numpy()
+        predY = predY
+        score = score
 
         # Write log
         tsids          = ts["id"].tolist()
@@ -267,10 +273,15 @@ class Classification(Base_wodirection):
 
 
 if __name__ == "__main__":
-    
-    bd    = "/work/ta-shunsuke/ACPredCompare"
+    import platform
+    if platform.system() == 'Darwin':
+        bd    = "/Users/tamura/work/ACPredCompare/"
+    else:
+        bd    = "/home/tamuras0/work/ACPredCompare/"
+        
+    #bd    = "/work/ta-shunsuke/ACPredCompare"
     model = "FCNN"
-    mtype = "wodirection"
+    mtype = "wodirection_trtssplit"
     os.chdir(bd)
     os.makedirs("./Log_%s"%mtype, exist_ok=True)
     os.makedirs("./Score_%s"%mtype, exist_ok=True)
@@ -281,13 +292,13 @@ if __name__ == "__main__":
                        dir_log    = './Log_%s/%s' %(mtype, model),
                        dir_score  = './Score_%s/%s' %(mtype, model)
                        )
-    #p.run_parallel(tlist['chembl_tid'])
+    p.run_parallel(tlist['chembl_tid'])
     
-    for i, sr in tlist.iterrows():
+    # for i, sr in tlist.iterrows():
         
-        target = sr['chembl_tid']
+    #     target = sr['chembl_tid']
         
-        p.run(target=target, debug=True)
+    #     p.run(target=target, debug=True)
         # p.GetScore(t="Thrombin")
         
         

@@ -356,6 +356,8 @@ class Base_wodirection():
         self.nbits_c = FindBitLength(self.ecfp, [self.col[0]])
         self.nbits_s = FindBitLength(self.ecfp, self.col[1:] )
         
+        self.nepoch  = self._Setnepoch()
+        
         if self.trtssplit == 'LOCO':
             # Leave One Core Out
             self.data_split_generator = LeaveOneCoreOut(self.main)
@@ -368,6 +370,16 @@ class Base_wodirection():
             self.testsetidx           = self.data_split_generator.keys()
             self.del_leak             = False
 
+
+    def _Setnepoch(self):
+        
+        if self.debug:
+            nepoch = [2, 2, 2]
+        else:
+            nepoch = [50, 100, 100]
+            
+        return nepoch
+    
         
     def _ReadDataFile(self, target, acbits=False):
 
@@ -463,9 +475,8 @@ class Base_wodirection():
         
         self.main, self.ecfp = self._ReadDataFile(target, acbits=self.aconly)
         
-        self._SetParams()
-        
         if self._IsPredictableSet():
+            self._SetParams()
             self._AllMMSPred(target)
             
         else:
