@@ -677,6 +677,7 @@ if __name__ == "__main__":
     os.makedirs("./Score_%s"%mtype, exist_ok=True)
     
     tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
+    tlist = tlist.loc[tlist['machine1'],:]
     p = Classification(modeltype  = mtype,
                        model      = model,
                        dir_log    = './Log_%s/%s' %(mtype, model),
