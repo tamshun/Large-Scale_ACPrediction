@@ -484,7 +484,7 @@ class Base_wodirection():
         
         
     def run_parallel(self, target_list, njob=-1):
-        result = joblib.Parallel(n_jobs=njob)(joblib.delayed(self.run)(target) for target in target_list)
+        result = joblib.Parallel(n_jobs=njob, backend='loky')(joblib.delayed(self.run)(target) for target in target_list)
         
         
     
@@ -573,6 +573,9 @@ class Base_wodirection_CGR():
 
     def _SetParams(self):
         
+        self.nepoch    = self._Setnepoch()
+        self.fixed_arg = self._set_fixedargs()
+        
         if self.trtssplit == 'LOCO':
             # Leave One Core Out
             self.data_split_generator = LeaveOneCoreOut(self.main)
@@ -585,6 +588,15 @@ class Base_wodirection_CGR():
             self.testsetidx           = self.data_split_generator.keys()
             self.del_leak             = False
 
+    
+    def _Setnepoch(self):
+        
+        if self.debug:
+            nepoch = [3, 3, 3]
+        else:
+            nepoch = [50, 100, 100]
+            
+        return nepoch
         
     def _ReadDataFile(self, target, acbits=False):
 
@@ -636,6 +648,7 @@ class Base_wodirection_CGR():
     
     def run(self, target, debug=False, onlyfccalc=False):
         
+        self.tname = target
         print("\n----- %s is proceeding -----\n" %target)
         
         if debug:

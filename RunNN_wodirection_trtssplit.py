@@ -10,6 +10,7 @@ import os
 import optuna
 import torch
 import json
+from joblib.externals.loky.backend.context import get_context
 from functools                         import partial
 from torch                             import nn
 from torch.utils.data                  import DataLoader, Subset
@@ -188,7 +189,7 @@ class Classification(Base_wodirection):
                                          hidden_nodes=[int(params['num_filter_%d'%i]) for i in range(params['n_layer'])],
                                          drop_rate=params['drop_rate']
                                          )
-        dataloader_tr = DataLoader(Dataset(fpset=trX, label=trY), shuffle=True, batch_size=params['batch_size'], num_workers=2)
+        dataloader_tr = DataLoader(Dataset(fpset=trX, label=trY), shuffle=True, batch_size=params['batch_size'], num_workers=2, multiprocessing_context=get_context('loky'))
         w_pos     = int(np.where(trY==0)[0].shape[0] / np.where(trY==1)[0].shape[0])
         self.loss_fn   = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([w_pos]))
         optimizer     = torch.optim.Adam(model.parameters(), lr=params['adam_lr'])
@@ -202,7 +203,7 @@ class Classification(Base_wodirection):
         
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         
-        dataloader_ts = DataLoader(Dataset(fpset=tsX, label=tsY), shuffle=False, num_workers=2)
+        dataloader_ts = DataLoader(Dataset(fpset=tsX, label=tsY), shuffle=False, num_workers=2, multiprocessing_context=get_context('loky'))
         
         pred_score, pred = test(model, device, self.loss_fn, dataloader_ts)
         
