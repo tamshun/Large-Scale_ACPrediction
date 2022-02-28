@@ -683,7 +683,7 @@ if __name__ == "__main__":
                        dir_log    = './Log_%s/%s' %(mtype, model),
                        dir_score  = './Score_%s/%s' %(mtype, model)
                        )
-    p.run_parallel(tlist['chembl_tid'], njob=5)
+    p.run_parallel(tlist['chembl_tid'], njob=8)
     
     # for i, sr in tlist.iterrows():
         
