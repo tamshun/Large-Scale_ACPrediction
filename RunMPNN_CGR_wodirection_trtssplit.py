@@ -669,7 +669,8 @@ if __name__ == "__main__":
         bd    = "/Users/tamura/work/ACPredCompare/"
     else:
         bd    = "/home/tamuras0/work/ACPredCompare/"
-        
+    
+    bd = '/home/bit/tamuras0/ACPredCompare'
     model = "MPNN"
     mtype = "wodirection_trtssplit"
     os.chdir(bd)
@@ -677,7 +678,7 @@ if __name__ == "__main__":
     os.makedirs("./Score_%s"%mtype, exist_ok=True)
     
     tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
-    tlist = tlist.loc[tlist['machine1'],:]
+    tlist = tlist.loc[tlist['machine2'],:]
     p = Classification(modeltype  = mtype,
                        model      = model,
                        dir_log    = './Log_%s/%s' %(mtype, model),
