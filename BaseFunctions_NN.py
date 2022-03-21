@@ -6,6 +6,7 @@ Created on Thu Jun 11 14:09:59 2020
 """
 
 #%%
+from importlib_metadata import functools
 import pandas as pd
 import numpy as np
 import os
@@ -574,7 +575,6 @@ class Base_wodirection_CGR():
     def _SetParams(self):
         
         self.nepoch    = self._Setnepoch()
-        self.fixed_arg = self._set_fixedargs()
         
         if self.trtssplit == 'LOCO':
             # Leave One Core Out
@@ -646,7 +646,7 @@ class Base_wodirection_CGR():
         return df_trX, df_tsX
     
     
-    def run(self, target, debug=False, onlyfccalc=False):
+    def run(self, target, load_params=False, debug=False, onlyfccalc=False):
         
         self.tname = target
         print("\n----- %s is proceeding -----\n" %target)
@@ -656,16 +656,28 @@ class Base_wodirection_CGR():
         
         self.main, self.cgr = self._ReadDataFile(target, acbits=self.aconly)
         
-        if self._IsPredictableSet():
+        if load_params:
             self._SetParams()
-            self._AllMMSPred(target)
+            self._AllMMSPred_Load(target)
             
         else:
-            print('    $ %s is skipped because of lack of the actives' %target)
+            
+            if self._IsPredictableSet():
+                self._SetParams()
+                self.fixed_arg = self._set_fixedargs()
+                self._AllMMSPred(target)
+                
+            else:
+                print('    $ %s is skipped because of lack of the actives' %target)
         
         
-    def run_parallel(self, target_list, njob=-1):
-        result = joblib.Parallel(n_jobs=njob)(joblib.delayed(self.run)(target) for target in target_list)
+    def run_parallel(self, target_list, load_params=False, njob=-1):
+        
+        if load_params:
+            run = functools.partial(self.run, load_params=load_params)
+            result = joblib.Parallel(n_jobs=njob)(joblib.delayed(run)(target) for target in target_list)
+        else:
+            result = joblib.Parallel(n_jobs=njob)(joblib.delayed(self.run)(target) for target in target_list)
         
         
     
@@ -716,6 +728,14 @@ class Base_wodirection_CGR():
     
     
     def _AllMMSPred(self, target):
+        
+        '''
+        main scripts
+        '''
+        pass
+    
+    
+    def _AllMMSPred_Load(self, target):
         
         '''
         main scripts

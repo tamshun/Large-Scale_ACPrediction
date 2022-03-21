@@ -7,7 +7,7 @@ import torch
 from torch                             import nn
 from torch.utils.data                  import dataloader, Subset, DataLoader
 #from torch_geometric.data              import DataLoader
-from Tools.ReadWrite                   import ToJson, LoadJson
+from Tools.ReadWrite                   import ToJson
 from collections                       import defaultdict
 from sklearn.metrics                   import roc_auc_score
 from sklearn.model_selection           import StratifiedKFold
@@ -243,41 +243,42 @@ class BatchMolGraph:
     
 class Dataset(torch.utils.data.Dataset):
     
-    def __init__(self, smi_list, label_list):
+    def __init__(self, df, label_list, col=['smi1', 'smi2']):
         
-        if not isinstance(smi_list, np.ndarray):
-            smi_list = smi_list.to_numpy()
-        if not isinstance(label_list, np.ndarray):
-            label_list = label_list.to_numpy()
+        smi1_list = df[col[0]].to_numpy()
+        smi2_list = df[col[1]].to_numpy()
         
         # Negative label is converted into 0 (originally -1)
         if -1 in label_list:    
             label_list[np.where(label_list==-1)[0]] = 0
             
-        self.smi_list   = smi_list
+        self.smi1_list  = smi1_list
+        self.smi2_list  = smi2_list
         self.label_list = label_list
         
     def __len__(self):
         return self.label_list.shape[0]
 
     def __getitem__(self, idx):
-        return self.smi_list[idx], self.label_list[idx]
+        return self.smi1_list[idx], self.smi2_list[idx], self.label_list[idx]
         #return [MolGraph(s) for s in self.smi_list[idx]], self.label_list[idx]
   
     
 def mycollate_fn(batch):
     
-    batch_list = list(zip(batch))
-    mol_graphs = []
-    labels     = []
+    batch_list  = list(zip(batch))
+    mol_graphs1 = []
+    mol_graphs2 = []
+    labels      = []
     
-    for smi, label in batch:
-        mol_graphs.append(MolGraph(smi))
+    for smi1, smi2, label in batch:
+        mol_graphs1.append(MolGraph(smi1))
+        mol_graphs2.append(MolGraph(smi2))
         labels.append(label)
     
     labels = torch.FloatTensor(labels).reshape([-1, 1])
         
-    return mol_graphs, labels
+    return mol_graphs1, mol_graphs2, labels
 
 class MPNEncoder(nn.Module):
     """A message passing neural network for encoding a molecule."""
@@ -411,9 +412,9 @@ class Classification(Base_wodirection_CGR):
         args = dict(
                     train_num    = self.nepoch[0],
                     batch_size   = 10, #trial.suggest_categorical('batch_size', [64, 128, 256])
-                    #lr           = 0.0001, #trial.suggest_log_uniform('adam_lr', 1e-4, 1e-2)                   
+                    lr           = 0.001, #trial.suggest_log_uniform('adam_lr', 1e-4, 1e-2)                   
                     agg_depth    = 1,
-                    cuda         = 'cpu', #torch.cuda.is_available(),
+                    cuda         = torch.cuda.is_available(),
                     gamma        = 0.1,
                     )
         
@@ -430,7 +431,7 @@ class Classification(Base_wodirection_CGR):
             
         args['step_size']  = int(args['train_num']/args['step_num'])
         args['grad_node']  = int(args['dim'] / args['DNNLayerNum'])
-        args['node_list']  = [int(args['dim'] - args['grad_node']*num) for num in range(args['DNNLayerNum'])] + [1]
+        args['node_list']  = [int(args['dim'] * 2 - args['grad_node']*num) for num in range(args['DNNLayerNum'])] + [1]
         
         return args
     
@@ -439,9 +440,11 @@ class Classification(Base_wodirection_CGR):
         
         return super()._SetML()
     
-    def predict(self, X):
+    def predict(self, X1, X2):
         
-        out  = self.mpn(X)
+        out1 = self.mpn_cpd1(X1)
+        out2 = self.mpn_cpd2(X2)
+        out  = torch.cat((out1, out2), 1)
         pred = self.dnn(out)
         
         return pred
@@ -454,26 +457,29 @@ class Classification(Base_wodirection_CGR):
         
     def train(self, args, device, dataloader, verbose=1):
         
-        self.mpn.train()
+        self.mpn_cpd1.train()
+        self.mpn_cpd2.train()
         self.dnn.train()
         
-        opt_list       = list(self.mpn.parameters()) + list(self.dnn.parameters())
+        opt_list       = list(self.mpn_cpd1.parameters()) + list(self.mpn_cpd2.parameters()) + list(self.dnn.parameters())
         self.optimizer = torch.optim.Adam(opt_list, lr=args['lr'])
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=args['step_size'], gamma=args['gamma'])
 
         if args['cuda']:
-            self.mpn = self.mpn.cuda()
-            self.dnn = self.dnn.cuda()
+            self.mpn_cpd1 = self.mpn_cpd1.cuda()
+            self.mpn_cpd2 = self.mpn_cpd2.cuda()
+            self.dnn      = self.dnn.cuda()
             
         size = len(dataloader.dataset)
         
         n_usedtr = 0
-        for batch, (X, y) in enumerate(dataloader):
+        for batch, (X1, X2, y) in enumerate(dataloader):
               
             # X, y = X.to(device), y.to(device)
-            X = BatchMolGraph(X)
+            X1 = BatchMolGraph(X1)
+            X2 = BatchMolGraph(X2)
             
-            score = self.predict(X)
+            score = self.predict(X1, X2)
             loss  =  self.loss_fn(score, y.to(device))
             
             # back propagation
@@ -490,7 +496,8 @@ class Classification(Base_wodirection_CGR):
 
     def test(self, device, dataloader):
         
-        self.mpn.eval()
+        self.mpn_cpd1.eval()
+        self.mpn_cpd2.eval()
         self.dnn.eval()
         
         size = len(dataloader.dataset)
@@ -499,10 +506,11 @@ class Classification(Base_wodirection_CGR):
         pred_score_all, pred_all, proba_all, y_all = [], [], [], []
         
         with torch.no_grad():
-            for X, y in dataloader:
-                X = BatchMolGraph(X)
+            for X1, X2, y in dataloader:
+                X1 = BatchMolGraph(X1)
+                X2 = BatchMolGraph(X2)
                 # X, y = X.to(device), y.to(device)
-                pred_score  = self.predict(X)
+                pred_score  = self.predict(X1, X2)
                 proba       = self.predict_proba(pred_score)
                 pred        = (proba>threshold).float()*1
                 
@@ -522,7 +530,7 @@ class Classification(Base_wodirection_CGR):
             
     def objective(self, trial, trX, trY):
         
-        device = 'cpu'#'cuda' if torch.cuda.is_available() else 'cpu'
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
         
         optarg = dict(
                     ConvNum      = trial.suggest_int('ConvNum', 2, 4), #depth
@@ -530,7 +538,6 @@ class Classification(Base_wodirection_CGR):
                     dim          = int(trial.suggest_discrete_uniform("dim", 70, 100, 10)),#hidden_dim
                     step_num     = trial.suggest_int("step_num", 1, 3),
                     DNNLayerNum  = trial.suggest_int('DNNLayerNum', 2, 8),  
-                    lr           = trial.suggest_loguniform('lr', 1e-4, 1e-2),
                     #batch_prop   = trial.suggest_loguniform('batch_prop', 1e-3, 0.3)                  
                     )
         
@@ -545,7 +552,7 @@ class Classification(Base_wodirection_CGR):
             self.output_act = self.output_act.cuda()  
         
         # Set up dataloader
-        dataset       = Dataset(smi_list=trX, label_list=trY)
+        dataset       = Dataset(df=trX, label_list=trY)
         kfold         = StratifiedKFold(n_splits=self.nfold, shuffle=True, random_state=0)
         score_cv      = []
         
@@ -556,7 +563,8 @@ class Classification(Base_wodirection_CGR):
             dataloader_vl = DataLoader(dataset_vl, args['batch_size'], shuffle=False, collate_fn=mycollate_fn)
         
             # training
-            self.mpn = MPNEncoder(args)
+            self.mpn_cpd1 = MPNEncoder(args)
+            self.mpn_cpd2 = MPNEncoder(args)
             self.dnn = DeepNeuralNetwork(args)
             EPOCH = self.nepoch[0]
             for step in range(EPOCH):
@@ -571,29 +579,29 @@ class Classification(Base_wodirection_CGR):
 
     def _fit_bestparams(self, args, trX, trY):
         
-        device = 'cpu'#'cuda' if torch.cuda.is_available() else 'cpu'
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
         
         EPOCH = self.nepoch[1]
         
-        dataloader_tr = DataLoader(Dataset(smi_list=trX, label_list=trY),
+        dataloader_tr = DataLoader(Dataset(df=trX, label_list=trY),
                                    batch_size = args['batch_size'],
                                    shuffle    = True, 
                                    collate_fn = mycollate_fn
                                    )
         
-        self.mpn = MPNEncoder(args)
+        self.mpn_cpd1 = MPNEncoder(args)
+        self.mpn_cpd2 = MPNEncoder(args)
         self.dnn = DeepNeuralNetwork(args)
-        
         for step in range(EPOCH):
             self.train(args, device, dataloader_tr)
             
 
-    def _predict_bestparams(self, args, tsX, tsY):
+    def _predict_bestparams(self, tsX, tsY):
         
-        device = 'cpu'#'cuda' if torch.cuda.is_available() else 'cpu'
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
         
-        dataloader_ts = DataLoader(Dataset(smi_list=tsX, label_list=tsY),
-                                   args['batch_size'],
+        dataloader_ts = DataLoader(Dataset(df=tsX, label_list=tsY),
+                                   self.fixed_arg['batch_size'],
                                    shuffle=False,
                                    collate_fn=mycollate_fn
                                    )
@@ -618,8 +626,8 @@ class Classification(Base_wodirection_CGR):
                 # Train test split
                 print("    $ Prediction for cid%d is going on.\n" %cid)
                 tr, ts, df_trX, df_tsX = self._GetTrainTest(cid)
-                trX, trY = df_trX[self.col], tr['class'].to_numpy()
-                tsX, tsY = df_tsX[self.col], ts['class'].to_numpy()
+                trX, trY = df_trX, tr['class'].to_numpy()
+                tsX, tsY = df_tsX, ts['class'].to_numpy()
                 
                 if self._IsPredictableSeries(tr, ts, min_npos=self.nfold):
                     # Fit and Predict
@@ -630,7 +638,7 @@ class Classification(Base_wodirection_CGR):
                     
                     best_args = self._set_arg_dict(study.best_params, n_data=trY.shape[0])
                     self._fit_bestparams(best_args, trX, trY)
-                    score, predY, proba = self._predict_bestparams(best_args, tsX, tsY)
+                    score, predY, proba = self._predict_bestparams(tsX, tsY)
                     print("    $ Prediction Done.\n")
                     
                     # Write & save log
@@ -660,51 +668,10 @@ class Classification(Base_wodirection_CGR):
         self.log.to_csv(path_log, sep="\t")
 
         ToJson(args, self.modeldir+"/params_%s_trial%d.json" %(target, cid))
-        torch.save(self.mpn.to('cpu').state_dict(), self.modeldir+"/mpn_%s_trial%d.pth" %(target, cid))
+        torch.save(self.mpn_cpd1.to('cpu').state_dict(), self.modeldir+"/mpn_cpd1_%s_trial%d.pth" %(target, cid))
+        torch.save(self.mpn_cpd2.to('cpu').state_dict(), self.modeldir+"/mpn_cpd2_%s_trial%d.pth" %(target, cid))
         torch.save(self.dnn.to('cpu').state_dict(), self.modeldir+"/dnn_%s_trial%d.pth" %(target, cid))
         print("    $  Log is out.\n")
-        
-    
-    def _AllMMSPred_Load(self, target):
-        
-        if self._IsPredictableTarget():
-            # Initialize
-            log = defaultdict(list) 
-
-            for cid in self.testsetidx:    
-                
-                if self.debug:
-                    if cid>2:
-                        break
-                
-                # Train test split
-                print("    $ Prediction for cid%d is going on.\n" %cid)
-                tr, ts, df_trX, df_tsX = self._GetTrainTest(cid)
-                trX, trY = df_trX[self.col], tr['class'].to_numpy()
-                tsX, tsY = df_tsX[self.col], ts['class'].to_numpy()
-                
-                if self._IsPredictableSeries(tr, ts, min_npos=self.nfold):
-                    # Fit and Predict
-                    p_args = './Log_wodirection_trtssplit/MPNN/Models/params_%s_trial%d.json' %(target, cid)
-                    best_args   = LoadJson(p_args)
-                    best_args['cuda'] = False
-                    
-                    self.w_pos = int(np.where(trY==-1)[0].shape[0] / np.where(trY==1)[0].shape[0])
-                    self.loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([self.w_pos]))
-                    
-                    if best_args['cuda']:
-                        self.loss_fn = self.loss_fn.cuda()
-                        
-                    self.output_act = nn.Sigmoid()
-                    
-                    self._fit_bestparams(best_args, trX, trY)
-                    score, predY, proba = self._predict_bestparams(best_args, tsX, tsY)
-                    print("    $ Prediction Done.\n")
-                    
-                    # Write & save log
-                    log = self._WriteLog(log, cid, tr, ts, tsY, predY, proba)           
-                    self._Save(target, cid, log, best_args)
-                    print("    $  Log is out.\n")
 
 
 if __name__ == "__main__":
@@ -716,7 +683,7 @@ if __name__ == "__main__":
         bd    = "/home/tamuras0/work/ACPredCompare/"
     
     bd = '/home/tamuras0/work/ACPredCompare'#'/home/bit/tamuras0/ACPredCompare'
-    model = "MPNN"
+    model = "MPNN_2entry"
     mtype = "wodirection_trtssplit"
     os.chdir(bd)
     os.makedirs("./Log_%s"%mtype, exist_ok=True)
@@ -729,18 +696,12 @@ if __name__ == "__main__":
                        dir_log    = './Log_%s/%s' %(mtype, model),
                        dir_score  = './Score_%s/%s' %(mtype, model)
                        )
-    p.run_parallel(tlist['chembl_tid'], load_params=False, njob=8)
+    # p.run_parallel(tlist['chembl_tid'], njob=8)
     
     # for i, sr in tlist.iterrows():
         
     #     target = sr['chembl_tid']
         
-    #     p.run(target=target, load_params=True, debug=False)
+    #     p.run(target=target, debug=True)
     
-    # p.run(target='CHEMBL234', load_params=True, debug=False)
-    
-    # import functools
-    # import joblib
-
-    # run = functools.partial(p.run, load_params=True)
-    # result = joblib.Parallel(n_jobs=3)(joblib.delayed(run)(target) for target in ['CHEMBL234', 'CHEMBL3018', 'CHEMBL4072'])
+    p.run(target='CHEMBL237', debug=False)

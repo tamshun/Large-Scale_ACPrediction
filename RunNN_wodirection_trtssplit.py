@@ -271,10 +271,28 @@ class Classification(Base_wodirection):
         ToJson(study.best_params, self.modeldir+"/params_%s_trial%d.json"%(target, trial))
         torch.save(ml.to('cpu').state_dict(), self.modeldir+"/Model_%s_trial%d.pth"%(target, trial))
         print("    $  Log is out.\n")  
+        
+        
+    def ConvertRowScoreToProb(self, target):
+        
+        func = nn.Sigmoid()
+        
+        for trial in range(3):
+            path_log     = os.path.join(self.logdir, "%s_%s_trial%d.tsv" %(target, self.mtype, trial))
+            log          = pd.read_csv(path_log, sep='\t', index_col=0)
+            log['score'] = log['prob'].copy()
+            score        = torch.FloatTensor(log['score'].to_numpy())
+            prob         = torch2numpy(func(score))
+            log['prob']  = prob
+
+            log.to_csv(path_log, sep='\t')
+
 
 
 if __name__ == "__main__":
     import platform
+    from tqdm import tqdm
+
     if platform.system() == 'Darwin':
         bd    = "/Users/tamura/work/ACPredCompare/"
     else:
@@ -288,6 +306,8 @@ if __name__ == "__main__":
     os.makedirs("./Score_%s"%mtype, exist_ok=True)
     
     tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
+    tlist = tlist.loc[tlist['predictable_trtssplit'], :]
+    
     p = Classification(modeltype  = mtype,
                        model      = model,
                        dir_log    = './Log_%s/%s' %(mtype, model),
@@ -295,12 +315,14 @@ if __name__ == "__main__":
                        )
     p.run_parallel(tlist['chembl_tid'])
     
-    # for i, sr in tlist.iterrows():
+    # for i, sr in tqdm(tlist.iterrows()):
         
     #     target = sr['chembl_tid']
         
     #     p.run(target=target, debug=True)
         # p.GetScore(t="Thrombin")
+        
+        # p.ConvertRowScoreToProb(target=target)
         
         
 
