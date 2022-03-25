@@ -420,7 +420,10 @@ def main(target, bd, debug=False):
     
     #Initialize   
     model = "MPNN"
-    mtype = "wodirection_trtssplit_debug"
+    mtype = "wodirection_trtssplit"
+    
+    if debug:
+        mtype +='_debug'
     
     os.chdir(bd)
     os.makedirs("./Log_%s"%mtype, exist_ok=True)
@@ -480,14 +483,17 @@ if __name__ == '__main__':
     
     bd = '/home/tamuras0/work/ACPredCompare'#'/home/bit/tamuras0/ACPredCompare'
     tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
-    #tlist = tlist.loc[tlist['machine1'],:]
+    tlist = tlist.loc[tlist['machine1'],:]
     
     debug = False
     
-    main('CHEMBL4072', bd, debug)
+    # main('CHEMBL4072', bd, debug)
     
     # for i, sr in tlist.iterrows():
     #     target = sr['chembl_tid']   
     
     #     print("\n----- %s is proceeding -----\n" %target)
     #     main(target, bd, debug)
+    
+    obj = partial(main, bd=bd, debug=debug)
+    joblib.Parallel(n_jobs=-1, backend='loky')(joblib.delayed(obj)(target) for target in tlist['chembl_tid'])
