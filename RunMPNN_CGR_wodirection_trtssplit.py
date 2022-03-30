@@ -481,7 +481,7 @@ def main(target, bd, debug=False):
             
 if __name__ == '__main__':    
     
-    bd = '/home/tamuras0/work/ACPredCompare'#'/home/bit/tamuras0/ACPredCompare'
+    bd = '/home/bit/tamuras0/ACPredCompare'#'/home/tamuras0/work/ACPredCompare'
     tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
     tlist = tlist.loc[tlist['machine1'],:]
     
