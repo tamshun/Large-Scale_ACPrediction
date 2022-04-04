@@ -483,7 +483,7 @@ if __name__ == '__main__':
     
     bd = '/home/bit/tamuras0/ACPredCompare'#'/home/tamuras0/work/ACPredCompare'
     tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
-    tlist = tlist.loc[tlist['machine1'],:]
+    tlist = tlist.loc[tlist['machine2'],:]
     
     debug = False
     

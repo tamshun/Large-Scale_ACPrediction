@@ -1,1 +1,1 @@
-{"train_num": 50, "batch_size": 128, "lr": 0.0001, "agg_depth": 1, "cuda": true, "gamma": 0.1, "ConvNum": 2, "dropout": 0.2, "dim": 100.0, "step_num": 2, "DNNLayerNum": 6, "batch_prop": 0.25687131495900417, "step_size": 25, "grad_node": 16, "node_list": [100, 84, 68, 52, 36, 20, 1]}
+{"train_num": 50, "batch_size": 128, "agg_depth": 1, "cuda": true, "gamma": 0.1, "ConvNum": 4, "dropout": 0.2, "dim": 100.0, "step_num": 1, "DNNLayerNum": 5, "lr": 0.009216690570445222, "step_size": 50, "grad_node": 20, "node_list": [100, 80, 60, 40, 20, 1]}
