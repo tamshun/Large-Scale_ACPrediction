@@ -1,0 +1,1 @@
+{"train_num": 50, "batch_size": 128, "cuda": false, "device": "cpu", "gamma": 0.1, "nbits": 844, "drop_rate": 0.15000000000000002, "step_num": 1, "DNNLayerNum": 5, "adam_lr": 0.0038783458981487425, "step_size": 50, "grad_node": 168, "node_list": [844, 676, 508, 340, 172, 1]}
