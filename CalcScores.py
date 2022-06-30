@@ -66,6 +66,8 @@ class MakeScoreTable(CalcBasicScore):
             
             if self.model in ['FCNN', 'MPNN']:
                 path_log = os.path.join(self.dir_log, "%s_trial%d_test.tsv" %(target, i))
+            elif 'NN' in self.model:
+                path_log = os.path.join(self.dir_log, "%s_trial%d_test.tsv" %(target, i))
             else:
                 path_log = os.path.join(self.dir_log, "%s_trial%d.tsv" %(target, i))
                 
@@ -105,7 +107,9 @@ if __name__ == '__main__':
     else:
         bd    = "/home/tamuras0/work/ACPredCompare/"
     
-    model = "FCNN"
+    ml = '5NN'
+    corr_ml = 'Random_Forest'
+    model = ml + '/' + corr_ml
     mtype = "wodirection_trtssplit"
     os.chdir(bd)
     os.makedirs("./Log_%s"%mtype, exist_ok=True)
