@@ -96,6 +96,60 @@ def MultipleTrainTestSplit(df, n_dataset=3):
     
     return trtssplit
 
+
+class AXV_generator():
+    
+    def __init__(self, data, keep_out_rate=0.2, seed=0, cols=['chembl_cid1', 'chembl_cid2']) -> None:
+        self.data = data
+        self.rate = keep_out_rate
+        self.seed = seed
+        self.cols = cols
+        self.whole_cpds = np.union1d(np.unique(data[cols[0]]),np.unique(data[cols[1]])).tolist()
+        
+        self.keepout = self._get_keepout()
+        self.identifier = self._set_identifier()
+        
+         
+    def _get_keepout(self):
+        random.seed(self.seed)
+        sample_size = int(len(self.whole_cpds)*self.rate)
+        keep_out = random.sample(self.whole_cpds, sample_size)
+        
+        return keep_out
+    
+    def _identifier(self, mmp:pd.Series):
+    
+        cpd1 = mmp[self.cols[0]]
+        cpd2 = mmp[self.cols[1]]
+        
+        isin_cpd1 = cpd1 in self.keepout
+        isin_cpd2 = cpd2 in self.keepout
+        
+        if (isin_cpd1==False) and (isin_cpd2==False):
+            return 0
+        
+        elif (isin_cpd1==True) and (isin_cpd2==True):
+            return 2
+        
+        elif (isin_cpd1==True) or (isin_cpd2==True):
+            return 1
+        
+    def _set_identifier(self):
+        return [self._identifier(sr) for i, sr in self.data.iterrows()]
+    
+    def get_subset(self, name):
+        
+        if name.lower() == 'train':   
+            mask = [True if i==0 else False for i in self.identifier]
+            
+        elif name.lower() == 'compound_out':
+            mask = [True if i==1 else False for i in self.identifier]
+            
+        elif name.lower() == 'both_out':
+            mask = [True if i==2 else False for i in self.identifier]
+            
+        return self.data.loc[mask, :]       
+         
 def RestoreFPfromstr(fp, bits):
     
     if isinstance(fp, str):
