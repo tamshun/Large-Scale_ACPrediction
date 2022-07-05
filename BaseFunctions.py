@@ -11,10 +11,39 @@ import numpy as np
 import os
 import joblib
 import random
-from MMP.make_input                    import LeaveOneCoreOut, GetDiverseCore, DelTestCpdFromTrain, MultipleTrainTestSplit
+from MMP.make_input                    import LeaveOneCoreOut, GetDiverseCore, DelTestCpdFromTrain
 from Tools.ReadWrite                   import ToJson
 from Fingerprint.Hash2BitManager       import Hash2Bits, FindBitLength
-from collections                       import defaultdict
+from collections                       import defaultdict, namedtuple
+from sklearn.model_selection           import StratifiedShuffleSplit
+
+
+TrainTestIdx = namedtuple("TrainTestIndex", ("tsidx", "tridx"))
+def MultipleTrainTestSplit(df, n_dataset=3):
+    
+    sss = StratifiedShuffleSplit(n_splits=n_dataset, test_size=0.3, random_state=0)
+    trtssplit = dict()
+    
+    i = 0
+    for tridx, tsidx in sss.split(X=np.zeros(df.shape[0]), y=df['class']):
+        trtssplit[i] = TrainTestIdx(df.index[tsidx], df.index[tridx])
+        i+=1
+    
+    return trtssplit
+
+AXVIdx = namedtuple('AXVIndex', ('tridx', 'compound_out', 'both_out'))
+def MultipleAXVSplit(df, seeds):
+    
+    axvsplit = dict() 
+    
+    for i in seeds:
+        axv = AXV_generator(df, seed=i)
+        axvsplit[i] = AXVIdx(axv.get_subset_idx('train'),
+                             axv.get_subset_idx('compound_out'),
+                             axv.get_subset_idx('both_out')
+                             )
+        
+    return axvsplit
 
 class AXV_generator():
     
@@ -56,7 +85,7 @@ class AXV_generator():
     def _set_identifier(self):
         return [self._identifier(sr) for i, sr in self.data.iterrows()]
     
-    def get_subset(self, name):
+    def get_subset_idx(self, name):
         
         if name.lower() == 'train':   
             mask = [True if i==0 else False for i in self.identifier]
@@ -67,7 +96,7 @@ class AXV_generator():
         elif name.lower() == 'both_out':
             mask = [True if i==2 else False for i in self.identifier]
             
-        return self.data.loc[mask, :]    
+        return mask    
     
 class Base_wodirection():
     
@@ -98,16 +127,18 @@ class Base_wodirection():
         return logdir, scoredir, modeldir
 
 
-    def _SetParams(self):
+    def _SetParams(self, target):
 
         self.nbits_c = FindBitLength(self.ecfp, [self.col[0]])
         self.nbits_s = FindBitLength(self.ecfp, self.col[1:] )
         
-        if self.trtssplit == 'LOCO':
+        if self.trtssplit == 'axv':
             # Leave One Core Out
-            self.data_split_generator = LeaveOneCoreOut(self.main)
+            all_seeds = pd.read_csv('./Dataset/Stats/axv.tsv', sep='\t', index_col=0).index
+            seeds = [int(i.split('-Seed')[1]) for i in all_seeds if target in i]
+            self.data_split_generator = MultipleAXVSplit(self.main, seeds=seeds)
             self.testsetidx           = self.data_split_generator.keys()
-            self.del_leak             = True
+            self.del_leak             = False
             self.predictable          = True
         
         elif self.trtssplit == 'trtssplit':
@@ -137,15 +168,25 @@ class Base_wodirection():
         '''
         Wrapper function of TrainTestSplit_main, TrainTestSplit_ecfp, Hash2Bits 
         '''
-        tr, ts = self._TrainTestSplit_main(cid, aconly)
         
-        df_trX, df_tsX = self._TrainTestSplit_ecfp(tr, ts)
-        
-        df_trY, df_tsY, trX, trY, tsX, tsY = self._Hash2Bits(tr, ts, df_trX, df_tsX)
+        if self.trtssplit == 'trtssplit':
+            tr, ts = self._TrainTestSplit_main(cid, aconly)
+            
+            df_trX, df_tsX = self._TrainTestSplit_ecfp(tr, ts)
+            
+            df_trY, df_tsY, trX, trY, tsX, tsY = self._Hash2Bits(tr, ts, df_trX, df_tsX)
 
-        return tr, ts, df_trX, df_trY, df_tsX, df_tsY, trX, trY, tsX, tsY
+            return tr, ts, df_trX, df_trY, df_tsX, df_tsY, trX, trY, tsX, tsY
         
-    
+        elif self.trtssplit == 'axv':
+            tr, cpdout, bothout = self._TrainTestSplit_main_axv(cid, aconly)
+            
+            df_trX, df_cpdoutX, df_bothoutX = self._TrainTestSplit_ecfp_axv(tr, cpdout, bothout)
+            
+            df_trY, df_cpdoutY, df_bothoutY, trX, trY, cpdoutX, cpdoutY, bothoutX, bothoutY = self._Hash2Bits_axv(tr, ts, df_trX, df_tsX)
+            
+            return tr, cpdout, bothout, df_trX, df_trY, df_cpdoutX, df_cpdoutY, df_bothoutX, df_bothoutY, trX, trY, cpdoutX, cpdoutY, bothoutX, bothoutY
+        
     def _TrainTestSplit_main(self, cid, aconly):
         
         generator = self.data_split_generator[cid]
@@ -181,6 +222,40 @@ class Base_wodirection():
 
         return df_trY, df_tsY, trX, trY, tsX, tsY
     
+    def _TrainTestSplit_main_axv(self, cid, aconly):
+        
+        generator = self.data_split_generator[cid]
+        tr        = self.main.loc[generator.tridx,        :]
+        cpdout    = self.main.loc[generator.compound_out, :]
+        bothout   = self.main.loc[generator.both_out,     :]        
+       
+        # Assign pd_sr of fp; [core, sub1, sub2]
+        if aconly:
+            print(    "Only AC-MMPs are used for making training data.\n")
+            tr = tr[tr["class"]==1]
+            
+        return tr, cpdout, bothout
+    
+    def _TrainTestSplit_ecfp_axv(self, tr, cpdout, bothout):
+        
+        df_trX      = self.ecfp.loc[tr.index     , :]
+        df_cpdoutX  = self.ecfp.loc[cpdout.index , :]
+        df_bothoutX = self.ecfp.loc[bothout.index, :]
+        
+        return df_trX, df_cpdoutX, df_bothoutX
+    
+    def _Hash2Bits_axv(self, tr, cpdout, bothout, df_trX, df_cpdoutX, df_bothoutX):
+        
+        df_trY      = tr["class"]
+        df_cpdoutY  = cpdout["class"]
+        df_bothoutY = bothout["class"]
+
+        forward            = Hash2Bits(subdiff=False, sub_reverse=False)
+        trX     , trY      = forward.GetMMPfingerprints_DF_unfold(df=df_trX, cols=self.col, Y=df_trY, nbits=[self.nbits_c, self.nbits_s], overlap="concat")
+        cpdoutX , cpdoutY  = forward.GetMMPfingerprints_DF_unfold(df=df_cpdoutX , cols=self.col, Y=df_cpdoutY , nbits=[self.nbits_c, self.nbits_s], overlap="concat")
+        bothoutX, bothoutY = forward.GetMMPfingerprints_DF_unfold(df=df_bothoutX, cols=self.col, Y=df_bothoutY, nbits=[self.nbits_c, self.nbits_s], overlap="concat")
+
+        return df_trY, df_cpdoutY, df_bothoutY, trX, trY, cpdoutX, cpdoutY, bothoutX, bothoutY
     
     def _GetMatrices_3parts(self, cid, aconly=False):
         '''
@@ -215,7 +290,7 @@ class Base_wodirection():
         
         self.main, self.ecfp = self._ReadDataFile(target, acbits=self.aconly)
         
-        self._SetParams()
+        self._SetParams(target)
         
         if self._IsPredictableSet():
             self._AllMMSPred(target)
