@@ -64,6 +64,7 @@ class Classification(Base_wodirection):
 
             for trial in self.testsetidx:    
                 
+                log_tr      = defaultdict(list)
                 log_cpdout  = defaultdict(list) 
                 log_bothout = defaultdict(list) 
                 
@@ -80,11 +81,13 @@ class Classification(Base_wodirection):
                     # Fit and Predict
                     ml = self._SetML()           
                     ml.fit(trX, trY)
+                    predY_tr      = ml.predict(trX)
                     predY_cpdout  = ml.predict(cpdoutX) 
                     predY_bothout = ml.predict(bothoutX) 
                     print("    $ Prediction Done.\n")
 
                     # Write & save log
+                    log_tr     = self._WriteLog(log_tr     , ml, trial, tr, tr , trX , trY , predY_tr)           
                     log_cpdout = self._WriteLog(log_cpdout , ml, trial, tr, cpdout , cpdoutX , cpdoutY , predY_cpdout)           
                     log_cpdout = self._WriteLog(log_bothout, ml, trial, tr, bothout, bothoutX, bothoutY, predY_bothout)           
                     self._Save(target, trial, log_cpdout, log_bothout, ml)
@@ -157,10 +160,10 @@ if __name__ == '__main__':
                        dir_score   = "./Score_%s/%s" %(mtype, model),
                        )
     
-    for i, sr in tlist.iterrows():
+    # for i, sr in tlist.iterrows():
         
-        target = sr['chembl_tid']
-        p.run(target=target, debug=True)
+    #     target = sr['chembl_tid']
+    #     p.run(target=target, debug=True)
     
     print(' $ %s is selected as machine learning method'%model)    
     p.run_parallel(tlist['chembl_tid'], njob=-1)

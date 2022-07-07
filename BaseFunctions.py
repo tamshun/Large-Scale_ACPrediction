@@ -183,7 +183,7 @@ class Base_wodirection():
             
             df_trX, df_cpdoutX, df_bothoutX = self._TrainTestSplit_ecfp_axv(tr, cpdout, bothout)
             
-            df_trY, df_cpdoutY, df_bothoutY, trX, trY, cpdoutX, cpdoutY, bothoutX, bothoutY = self._Hash2Bits_axv(tr, ts, df_trX, df_tsX)
+            df_trY, df_cpdoutY, df_bothoutY, trX, trY, cpdoutX, cpdoutY, bothoutX, bothoutY = self._Hash2Bits_axv(tr, cpdout, bothout, df_trX, df_cpdoutX, df_bothoutX)
             
             return tr, cpdout, bothout, df_trX, df_trY, df_cpdoutX, df_cpdoutY, df_bothoutX, df_bothoutY, trX, trY, cpdoutX, cpdoutY, bothoutX, bothoutY
         

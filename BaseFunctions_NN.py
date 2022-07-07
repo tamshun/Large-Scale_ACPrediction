@@ -12,7 +12,7 @@ import numpy as np
 import os
 import joblib
 from collections import namedtuple
-from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import StratifiedShuffleSplit, train_test_split
 from rdkit import Chem
 import torch
 from torch import nn
@@ -97,6 +97,20 @@ def MultipleTrainTestSplit(df, n_dataset=3):
     return trtssplit
 
 
+AXVIdx = namedtuple('AXVIndex', ('tridx', 'compound_out', 'both_out'))
+def MultipleAXVSplit(df, seeds):
+    
+    axvsplit = dict() 
+    
+    for i in seeds:
+        axv = AXV_generator(df, seed=i)
+        axvsplit[i] = AXVIdx(axv.get_subset_idx('train'),
+                             axv.get_subset_idx('compound_out'),
+                             axv.get_subset_idx('both_out')
+                             )
+        
+    return axvsplit
+
 class AXV_generator():
     
     def __init__(self, data, keep_out_rate=0.2, seed=0, cols=['chembl_cid1', 'chembl_cid2']) -> None:
@@ -137,7 +151,7 @@ class AXV_generator():
     def _set_identifier(self):
         return [self._identifier(sr) for i, sr in self.data.iterrows()]
     
-    def get_subset(self, name):
+    def get_subset_idx(self, name):
         
         if name.lower() == 'train':   
             mask = [True if i==0 else False for i in self.identifier]
@@ -148,7 +162,7 @@ class AXV_generator():
         elif name.lower() == 'both_out':
             mask = [True if i==2 else False for i in self.identifier]
             
-        return self.data.loc[mask, :]       
+        return mask           
          
 def RestoreFPfromstr(fp, bits):
     
@@ -938,13 +952,16 @@ class Base_wodirection_CGR():
         return logdir, scoredir, modeldir
 
 
-    def _SetParams(self):
+    def _SetParams(self, target):
         
-        if self.trtssplit == 'LOCO':
+        if self.trtssplit == 'axv':
             # Leave One Core Out
-            self.data_split_generator = LeaveOneCoreOut(self.main)
+            all_seeds = pd.read_csv('./Dataset/Stats/axv.tsv', sep='\t', index_col=0).index
+            seeds = [int(i.split('-Seed')[1]) for i in all_seeds if target in i]
+            self.data_split_generator = MultipleAXVSplit(self.main, seeds=seeds)
             self.testsetidx           = self.data_split_generator.keys()
-            self.del_leak             = True
+            self.del_leak             = False
+            self.predictable          = True
         
         elif self.trtssplit == 'trtssplit':
             # Stratified Shuffled split
@@ -967,9 +984,13 @@ class Base_wodirection_CGR():
         '''
         Wrapper function of TrainTestSplit_main, TrainTestSplit_ecfp, Hash2Bits 
         '''
-        tr, ts = self._TrainTestSplit(cid, aconly)
-
-        return tr, ts
+        if self.trtssplit == 'axv':
+            tr, cpdout, bothout = self._TrainTestSplit_axv(cid, aconly)
+            return tr, cpdout, bothout
+        
+        elif self.trtssplit == 'trtssplit':
+            tr, ts = self._TrainTestSplit(cid, aconly)
+            return tr, ts
         
     
     def _TrainTestSplit(self, cid, aconly):
@@ -990,6 +1011,21 @@ class Base_wodirection_CGR():
         return tr, ts
     
     
+    def _TrainTestSplit_axv(self, cid, aconly):
+        
+        generator = self.data_split_generator[cid]
+        tr        = self.main.loc[generator.tridx,        :]
+        cpdout    = self.main.loc[generator.compound_out, :]
+        bothout   = self.main.loc[generator.both_out,     :]        
+       
+        # Assign pd_sr of fp; [core, sub1, sub2]
+        if aconly:
+            print(    "Only AC-MMPs are used for making training data.\n")
+            tr = tr[tr["class"]==1]
+            
+        return tr, cpdout, bothout
+    
+    
     def run(self, target, load_params=False, debug=False, onlyfccalc=False):
         
         self.tname = target
@@ -1001,13 +1037,13 @@ class Base_wodirection_CGR():
         self.main, self.cgr = self._ReadDataFile(target, acbits=self.aconly)
         
         if load_params:
-            self._SetParams()
+            self._SetParams(target)
             self._AllMMSPred_Load(target)
             
         else:
             
             if self._IsPredictableSet():
-                self._SetParams()
+                self._SetParams(target)
                 self.fixed_arg = self._set_fixedargs()
                 self._AllMMSPred(target)
                 
