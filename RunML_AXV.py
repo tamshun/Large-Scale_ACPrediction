@@ -16,6 +16,9 @@ from Tools.ReadWrite                     import ReadDataAndFingerprints, ToPickl
 from collections                         import defaultdict
 from sklearnex                           import patch_sklearn
 from BaseFunctions                       import Base_wodirection
+from sklearn.neighbors                   import KNeighborsClassifier
+from Kernels.Kernel                      import funcTanimotoKernel_MMPKernel
+from functools                           import partial
 
 patch_sklearn()
 
@@ -52,6 +55,16 @@ class Classification(Base_wodirection):
             print('    $ XGboost is used.')
             model = xgb(nfold=self.nfold)
             
+        elif model_name == '1nn':
+            print('    $ 1NN is used.')
+            dist_func = partial(funcTanimotoKernel_MMPKernel, len_c=self.nbits_c)
+            model     = KNeighborsClassifier(n_neighbors=1, metric=dist_func, n_jobs=-1)
+            
+        elif model_name == '5nn':
+            print('    $ 5NN is used.')
+            dist_func = partial(funcTanimotoKernel_MMPKernel, len_c=self.nbits_c)
+            model     = KNeighborsClassifier(n_neighbors=5, metric=dist_func, n_jobs=-1)
+            
         else:
             NotImplementedError("%s has not been implemented. Please put the obj directly." %model_name)
 
@@ -85,12 +98,17 @@ class Classification(Base_wodirection):
                     predY_cpdout  = ml.predict(cpdoutX) 
                     predY_bothout = ml.predict(bothoutX) 
                     print("    $ Prediction Done.\n")
-
+                    
                     # Write & save log
                     log_tr     = self._WriteLog(log_tr     , ml, trial, tr, tr , trX , trY , predY_tr)           
                     log_cpdout = self._WriteLog(log_cpdout , ml, trial, tr, cpdout , cpdoutX , cpdoutY , predY_cpdout)           
                     log_cpdout = self._WriteLog(log_bothout, ml, trial, tr, bothout, bothoutX, bothoutY, predY_bothout)           
-                    self._Save(target, trial, log_cpdout, log_bothout, ml)
+                    
+                    # if self.model_name in ['1NN', '5NN']:
+                    log_cpdout  = self._AddNeighbor(log_cpdout , ml, tr, cpdoutX)
+                    log_bothout = self._AddNeighbor(log_bothout , ml, tr, bothoutX)
+            
+                    self._Save(target, trial, log_tr, log_cpdout, log_bothout, ml)
                     print("    $  Log is out.\n")
                 else:
                     print('    $ cid%d is not predictable' %trial)
@@ -112,19 +130,33 @@ class Classification(Base_wodirection):
         if mname == "svm":
             log["prob"] += ml.dec_func_.tolist()
 
-        elif mname == "random_forest":
-            log["prob"] += [prob[1] for prob in ml.score(tsX).tolist()]
-            
-        elif mname == 'xgboost':
+        elif mname in ['xgboost', "random_forest"]:
             log["prob"] += [prob[1] for prob in ml.score(tsX).tolist()]
         
+        elif mname in ['1nn', '5nn']:
+            log["prob"] += [prob[1] for prob in ml.predict_proba(tsX).tolist()]
+            
         else:
             raise NotImplementedError('%s is not available so far' %self.mname)
         
         return log
         
         
-    def _Save(self, target, trial, log_cpdout, log_bothout, ml):
+    def _AddNeighbor(self, log, ml, tr, tsX):
+        
+        dist_neigh, idx_neigh = ml.kneighbors(tsX, return_distance=True)
+        id_neigh   = ['; '.join([tr['id'].iloc[i] for i in idx]) for idx in idx_neigh]
+        dist_neigh = ['; '.join(d.astype(str)) for d in dist_neigh] 
+        log['neighbor'] += id_neigh
+        log['distance'] += dist_neigh    
+        
+        return log
+        
+    def _Save(self, target, trial, log_tr, log_cpdout, log_bothout, ml):
+        
+        path_tr = os.path.join(self.logdir, "%s_tr_trial%d.tsv" %(target, trial))
+        self.log_tr = pd.DataFrame.from_dict(log_tr)
+        self.log_tr.to_csv(path_tr, sep="\t")
         
         path_cpdout = os.path.join(self.logdir, "%s_cpdout_trial%d.tsv" %(target, trial))
         self.log_cpdout = pd.DataFrame.from_dict(log_cpdout)
@@ -137,17 +169,9 @@ class Classification(Base_wodirection):
         params = {key: val for key, val in ml.get_params().items() if key!='kernel'}
         ToJson(params, self.modeldir+"/%s_trial%d.json"%(target, trial))
         
-        
-if __name__ == '__main__':
+
+def main(bd, model, mtype):
     
-    if platform.system() == 'Darwin':
-        bd    = "/Users/tamura/work/ACPredCompare/"
-    else:
-        bd    = "/home/tamuras0/work/ACPredCompare/"
-        
-    model = "SVM"
-    
-    mtype = "axv"
     os.chdir(bd)
     os.makedirs("./Log_%s"%mtype  , exist_ok=True)
     os.makedirs("./Score_%s"%mtype, exist_ok=True)
@@ -167,5 +191,32 @@ if __name__ == '__main__':
     
     print(' $ %s is selected as machine learning method'%model)    
     p.run_parallel(tlist['chembl_tid'], njob=-1)
+
+def debug(bd, model, mtype):
+    os.chdir(bd)
+    os.makedirs("./Log_%s"%mtype  , exist_ok=True)
+    os.makedirs("./Score_%s"%mtype, exist_ok=True)
     
+    tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
+    
+    p = Classification(modeltype   = mtype,
+                       model       = model,
+                       dir_log     = "./Log_%s/%s" %(mtype, model),
+                       dir_score   = "./Score_%s/%s" %(mtype, model),
+                       )
+    p.run('CHEMBL204')
+    
+if __name__ == '__main__':
+    
+    if platform.system() == 'Darwin':
+        bd    = "/Users/tamura/work/ACPredCompare/"
+    else:
+        bd    = "/home/tamuras0/work/ACPredCompare/"
+        
+    #model = "Random_Forest"
+    mtype = "axv"
+    
+    #debug(bd, model='1NN', mtype=mtype)
+    main(bd, model='1NN', mtype=mtype)
+    main(bd, model='5NN', mtype=mtype)
  
