@@ -265,11 +265,13 @@ class Classification(Base_wodirection):
                 
                 # Train test split
                 print("    $ Prediction for cid%d is going on.\n" %trial)
-                tr, ts, df_trX, df_trY, df_tsX, df_tsY, trX, trY, tsX, tsY = self._GetMatrices(trial)
+                tr, cpdout, bothout, df_trX, df_trY, df_cpdoutX, df_cpdoutY, df_bothoutX, df_bothoutY, trX, trY, cpdoutX, cpdoutY, bothoutX, bothoutY = self._GetMatrices(trial)
                 trY[np.where(trY==-1)[0]] = 0
-                tsY[np.where(tsY==-1)[0]] = 0
+                cpdoutY[np.where(cpdoutY==-1)[0]] = 0
+                bothoutY[np.where(bothoutY==-1)[0]] = 0
                 
-                if self._IsPredictableSeries(tr, ts, min_npos=self.nfold):
+                flag_predictable = self._IsPredictableSeries(tr, cpdout, min_npos=self.nfold) * self._IsPredictableSeries(tr, bothout, min_npos=self.nfold)
+                if flag_predictable:
                     # Fit and Predict
                     pruner = optuna.pruners.MedianPruner()
                     study = optuna.create_study(pruner=pruner, direction='maximize')
@@ -280,7 +282,7 @@ class Classification(Base_wodirection):
                                 train_num    = self.nepoch[0],
                                 batch_size   = 128,
                                 cuda         = False,#torch.cuda.is_available(),
-                                device       = 'cpu',#'cuda' if torch.cuda.is_available() else 'cpu'
+                                device       = 'cuda' if torch.cuda.is_available() else 'cpu'
                                 gamma        = 0.1,
                                 nbits        = trX.shape[1]
                                 )
@@ -292,14 +294,16 @@ class Classification(Base_wodirection):
                     w_pos     = int(np.where(trY==0)[0].shape[0] / np.where(trY==1)[0].shape[0])
                     loss_fn   = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([w_pos]))
                     ml        = self._fit_bestparams(best_args, trX, trY, loss_fn)
-                    score_tr, predY_tr, proba_tr = self._predict_bestparams(best_args, ml, trX, trY, loss_fn)
-                    score_ts, predY_ts, proba_ts = self._predict_bestparams(best_args, ml, tsX, tsY, loss_fn)
+                    score_tr     , predY_tr     , proba_tr      = self._predict_bestparams(best_args, ml, trX, trY, loss_fn)
+                    score_cpdout , predY_cpdout , proba_cpdout  = self._predict_bestparams(best_args, ml, cpdoutX, cpdoutY, loss_fn)
+                    score_bothout, predY_bothout, proba_bothout = self._predict_bestparams(best_args, ml, bothoutX, bothoutY, loss_fn)
                     print("    $ Prediction Done.\n")
 
                     # Write & save log
-                    log_tr = p.WriteLog_tr(trial, tr, trY, predY_tr, proba_tr) 
-                    log_ts = p.WriteLog_ts(trial, tr, ts, tsY, predY_ts, proba_ts)  
-                    p.Save(target, trial, log_tr, log_ts, best_args, ml)
+                    log_tr      = p.WriteLog_tr(trial, tr, trY, predY_tr, proba_tr) 
+                    log_cpdout  = p.WriteLog_ts(trial, tr, cpdout, cpdoutY, predY_cpdout, proba_cpdout)
+                    log_bothout = p.WriteLog_ts(trial, tr, bothout, bothoutY, predY_bothout, proba_bothout)  
+                    self.Save(target, trial, log_tr, log_cpdout, log_bothout,best_args, ml)
                     print("    $  Log is out.\n")      
             
             
@@ -338,56 +342,72 @@ class Classification(Base_wodirection):
         return log
         
         
-    def Save(self, target, cid, log_tr, log_ts, args, dnn):
-        path_log_tr = os.path.join(self.logdir, "%s_trial%d_train.tsv" %(target, cid))
+    def Save(self, target, seed, log_tr, log_cpdout, log_bothout, args, ml):
+        path_log_tr = os.path.join(self.logdir, "%s_Seed%d_train.tsv" %(target, seed))
         self.log_tr = pd.DataFrame.from_dict(log_tr)
         self.log_tr.to_csv(path_log_tr, sep="\t")
         
-        path_log_ts = os.path.join(self.logdir, "%s_trial%d_test.tsv" %(target, cid))
-        self.log_ts = pd.DataFrame.from_dict(log_ts)
-        self.log_ts.to_csv(path_log_ts, sep="\t")
-
-        ToJson(args, self.modeldir+"/params_%s_trial%d.json" %(target, cid))
-        torch.save(dnn.to('cpu').state_dict(), self.modeldir+"/dnn_%s_trial%d.pth" %(target, cid))
-
-
-
-if __name__ == "__main__":
-    import platform
-    from tqdm import tqdm
-
-    if platform.system() == 'Darwin':
-        bd    = "/Users/tamura/work/ACPredCompare/"
-    else:
-        bd    = "/home/tamuras0/work/ACPredCompare/"
+        path_log_cpdout = os.path.join(self.logdir, "%s_Seed%d_cpdout.tsv" %(target, seed))
+        self.log_cpdout = pd.DataFrame.from_dict(log_cpdout)
+        self.log_cpdout.to_csv(path_log_cpdout, sep="\t")
         
-    #bd    = "/work/ta-shunsuke/ACPredCompare"
+        path_log_bothout = os.path.join(self.logdir, "%s_Seed%d_bothout.tsv" %(target, seed))
+        self.log_bothout = pd.DataFrame.from_dict(log_bothout)
+        self.log_bothout.to_csv(path_log_bothout, sep="\t")
+
+        ToJson(args, self.modeldir+"/params_%s_Seed%d.json" %(target, seed))
+        torch.save(ml.to('cpu').state_dict(), self.modeldir+"/dnn_%s_Seed%d.pth" %(target, seed))
+
+def main(bd):
+    
+    #Initialize   
     model = "FCNN"
-    mtype = "wodirection_trtssplit"
+    mtype = "axv"
+    
+    tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
+    tlist = tlist.loc[tlist['machine1'],:]
+    
     os.chdir(bd)
     os.makedirs("./Log_%s"%mtype, exist_ok=True)
     os.makedirs("./Score_%s"%mtype, exist_ok=True)
     
+    p = Classification(modeltype  = mtype,
+                       model      = model,
+                       dir_log    = './Log_%s/%s' %(mtype, model),
+                       dir_score  = './Score_%s/%s' %(mtype, model),
+                       )
+                    
+    p.run_parallel(tlist['chembl_tid'], njob=-1)
+    
+
+def debug(bd):
+    
+    #Initialize   
+    model = "FCNN"
+    mtype = "axv"
+    mtype +='_debug'
+    
     tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
-    tlist = tlist.loc[tlist['predictable_trtssplit'], :]
+    tlist = tlist.loc[tlist['machine1'],:]
+        
+    os.chdir(bd)
+    os.makedirs("./Log_%s"%mtype, exist_ok=True)
+    os.makedirs("./Score_%s"%mtype, exist_ok=True)
     
     p = Classification(modeltype  = mtype,
                        model      = model,
                        dir_log    = './Log_%s/%s' %(mtype, model),
-                       dir_score  = './Score_%s/%s' %(mtype, model)
+                       dir_score  = './Score_%s/%s' %(mtype, model),
                        )
+                    
+    p.run('CHEMBL204')
+                    
+            
+if __name__ == '__main__':    
     
-    p.run(target='CHEMBL244', debug=False)
-    # p.run_parallel(tlist['chembl_tid'])
+    bd = '/home/bit/tamuras0/ACPredCompare'#'/home/tamuras0/work/ACPredCompare'
     
-    # for i, sr in tqdm(tlist.iterrows()):
-        
-    #     target = sr['chembl_tid']
-        
-    #     p.run(target=target, debug=False)
-        # p.GetScore(t="Thrombin")
-        
-        # p.ConvertRowScoreToProb(target=target)
+    debug(bd)
         
         
 

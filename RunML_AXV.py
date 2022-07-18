@@ -91,9 +91,9 @@ class Classification(Base_wodirection):
                     print("    $ Prediction Done.\n")
                     
                     # Write & save log
-                    log_tr     = self._WriteLog(log_tr     , ml, trial, tr, tr , trX , trY , predY_tr)           
-                    log_cpdout = self._WriteLog(log_cpdout , ml, trial, tr, cpdout , cpdoutX , cpdoutY , predY_cpdout)           
-                    log_cpdout = self._WriteLog(log_bothout, ml, trial, tr, bothout, bothoutX, bothoutY, predY_bothout)           
+                    log_tr      = self._WriteLog(log_tr     , ml, trial, tr, tr , trX , trY , predY_tr)           
+                    log_cpdout  = self._WriteLog(log_cpdout , ml, trial, tr, cpdout , cpdoutX , cpdoutY , predY_cpdout)           
+                    log_bothout = self._WriteLog(log_bothout, ml, trial, tr, bothout, bothoutX, bothoutY, predY_bothout)           
             
                     self._Save(target, trial, log_tr, log_cpdout, log_bothout, ml)
                     print("    $  Log is out.\n")
@@ -156,11 +156,6 @@ def main(bd, model, mtype):
                        dir_log     = "./Log_%s/%s" %(mtype, model),
                        dir_score   = "./Score_%s/%s" %(mtype, model),
                        )
-    
-    # for i, sr in tlist.iterrows():
-        
-    #     target = sr['chembl_tid']
-    #     p.run(target=target, debug=True)
     
     print(' $ %s is selected as machine learning method'%model)    
     p.run_parallel(tlist['chembl_tid'], njob=-1)

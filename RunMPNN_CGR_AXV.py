@@ -91,9 +91,9 @@ class DeepNeuralNetwork(nn.Module):
     
 class Classification(Base_wodirection_CGR):
 
-    def __init__(self, target, modeltype, model, dir_log, dir_score, data_split_metric='axv', debug=False):
+    def __init__(self, modeltype, model, dir_log, dir_score, data_split_metric='axv', debug=False):
 
-        super().__init__(target, modeltype, dir_log=dir_log, dir_score=dir_score, data_split_metric=data_split_metric)
+        super().__init__(modeltype, dir_log=dir_log, dir_score=dir_score, data_split_metric=data_split_metric)
 
         self.pred_type = "classification"
         self.mname     = model
@@ -462,48 +462,53 @@ def predict_bestparams(info, mpn, dnn, args, tsX, tsY, loss_fn):
     return pred_score, pred, proba
 
     
-def main(target, bd, debug=False):
+def main(bd):
     
     #Initialize   
     model = "MPNN"
     mtype = "axv"
     
-    if debug:
-        mtype +='_debug'
+    tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
+    tlist = tlist.loc[tlist['machine1'],:]
     
     os.chdir(bd)
     os.makedirs("./Log_%s"%mtype, exist_ok=True)
     os.makedirs("./Score_%s"%mtype, exist_ok=True)
     
-    p = Classification(target     = target, 
-                       modeltype  = mtype,
+    p = Classification(modeltype  = mtype,
                        model      = model,
                        dir_log    = './Log_%s/%s' %(mtype, model),
                        dir_score  = './Score_%s/%s' %(mtype, model),
                        )
+                    
+    p.run_parallel(tlist['chembl_tid'], njob=-1)
     
-    if not p._IsPredictableSet():
-        print('    $ %s is skipped because of lack of the actives' %target)
+
+def debug(bd):
     
-    else:    
-        p.run_parallel()
+    #Initialize   
+    model = "MPNN"
+    mtype = "axv"
+    mtype +='_debug'
+    
+    tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
+    tlist = tlist.loc[tlist['machine1'],:]
+        
+    os.chdir(bd)
+    os.makedirs("./Log_%s"%mtype, exist_ok=True)
+    os.makedirs("./Score_%s"%mtype, exist_ok=True)
+    
+    p = Classification(modeltype  = mtype,
+                       model      = model,
+                       dir_log    = './Log_%s/%s' %(mtype, model),
+                       dir_score  = './Score_%s/%s' %(mtype, model),
+                       )
+                    
+    p.run('CHEMBL204')
                     
             
 if __name__ == '__main__':    
     
     bd = '/home/bit/tamuras0/ACPredCompare'#'/home/tamuras0/work/ACPredCompare'
-    tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
-    tlist = tlist.loc[tlist['machine1'],:]
     
-    debug = True
-    
-    main('CHEMBL4072', bd, debug)
-    
-    # for i, sr in tlist.iterrows():
-    #     target = sr['chembl_tid']   
-    
-    #     print("\n----- %s is proceeding -----\n" %target)
-    #     main(target, bd, debug)
-    
-    # obj = partial(main, bd=bd, debug=debug)
-    # joblib.Parallel(n_jobs=-1, backend='loky')(joblib.delayed(obj)(target) for target in tlist['chembl_tid'])
+    debug(bd)
