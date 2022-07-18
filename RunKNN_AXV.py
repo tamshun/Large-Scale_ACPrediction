@@ -9,9 +9,7 @@ import pandas as pd
 import numpy as np
 import os
 import platform
-from SVM.svmwrappers                     import MMPKernelSVM_sklearn   as svm
-from RandomForest.RandomForestClassifier import RandomForest_cls_CV as rf
-from GradientBoost.XGBoost               import XGBoost_CV as xgb
+from sklearn.neighbors                   import KNeighborsClassifier
 from Tools.ReadWrite                     import ReadDataAndFingerprints, ToPickle, ToJson
 from collections                         import defaultdict
 from sklearnex                           import patch_sklearn
@@ -20,7 +18,11 @@ from sklearn.neighbors                   import KNeighborsClassifier
 from Kernels.Kernel                      import funcTanimotoKernel_MMPKernel
 from functools                           import partial
 
-patch_sklearn()
+#patch_sklearn()
+
+def distance_func(x, y, len_c):
+    
+    return 1 - funcTanimotoKernel_MMPKernel(x, y, len_c=len_c)
 
 class Classification(Base_wodirection):
 
@@ -30,36 +32,11 @@ class Classification(Base_wodirection):
         self.model_name = model
         self.pred_type  = "classification"
         self.nfold      = 3
-    
-    
-    def _SetML(self, kernel_type="product"):
         
-        model_name = self.model_name.lower()
-        
-        if model_name == "svm":
-
-            if kernel_type == "product":
-                print('    $ svm with MMPkernel is used.')
-                weight  = False
-            else: 
-                print('    $ svm with weighted MMPkernel is used.')
-                weight = kernel_type
-
-            model = svm(len_c=self.nbits_c, decision_func=True, weight_kernel=weight, cv=True, nfold=self.nfold)
-
-        elif model_name == "random_forest":
-            print('    $ random forest is used.')
-            model = rf(nfold=self.nfold)
-            
-        elif model_name == 'xgboost':
-            print('    $ XGboost is used.')
-            model = xgb(nfold=self.nfold)
-            
-            
-        else:
-            NotImplementedError("%s has not been implemented. Please put the obj directly." %model_name)
-
-        return model
+        if self.model_name == '1NN':
+            self.dist = 1
+        elif self.model_name == '5NN':
+            self.dist = 5
         
         
     def _AllMMSPred(self, target):
@@ -83,19 +60,18 @@ class Classification(Base_wodirection):
                 flag_predictable = self._IsPredictableSeries(tr, cpdout, min_npos=self.nfold) * self._IsPredictableSeries(tr, bothout, min_npos=self.nfold)
                 if flag_predictable:
                     # Fit and Predict
-                    ml = self._SetML()           
+                    dist_func = partial(distance_func, len_c=self.nbits_c)
+                    ml = KNeighborsClassifier(n_neighbors=self.dist, metric=dist_func, n_jobs=-1)
                     ml.fit(trX, trY)
-                    predY_tr      = ml.predict(trX)
                     predY_cpdout  = ml.predict(cpdoutX) 
                     predY_bothout = ml.predict(bothoutX) 
+                    log_cpdout = self._WriteLog(log_cpdout , ml, trial, tr, cpdout , cpdoutX , cpdoutY , predY_cpdout)           
+                    log_cpdout = self._WriteLog(log_bothout, ml, trial, tr, bothout, bothoutX, bothoutY, predY_bothout)           
+                    self._Save(target, trial, log_tr, log_cpdout, log_bothout, ml)
                     print("    $ Prediction Done.\n")
                     
                     # Write & save log
-                    log_tr     = self._WriteLog(log_tr     , ml, trial, tr, tr , trX , trY , predY_tr)           
-                    log_cpdout = self._WriteLog(log_cpdout , ml, trial, tr, cpdout , cpdoutX , cpdoutY , predY_cpdout)           
-                    log_cpdout = self._WriteLog(log_bothout, ml, trial, tr, bothout, bothoutX, bothoutY, predY_bothout)           
-            
-                    self._Save(target, trial, log_tr, log_cpdout, log_bothout, ml)
+                    #log_tr     = self._WriteLog(log_tr     , ml, trial, tr, tr , trX , trY , predY_tr)           
                     print("    $  Log is out.\n")
                 else:
                     print('    $ cid%d is not predictable' %trial)
@@ -112,24 +88,22 @@ class Classification(Base_wodirection):
         log['#ac_tr']   += [tr[tr['class']==1].shape[0]] * len(tsids)
         log["trueY"]    += tsY.tolist()
         log["predY"]    += predY.tolist()
+        log['prob']     += [p[1] for p in ml.predict_proba(tsX)]
 
-        mname = self.model_name.lower()
-        if mname == "svm":
-            log["prob"] += ml.svc_.decision_function(tsX).tolist()
-
-        elif mname in ['xgboost', "random_forest"]:
-            log["prob"] += [prob[1] for prob in ml.score(tsX).tolist()]
-            
-        else:
-            raise NotImplementedError('%s is not available so far' %self.mname)
+        dist_neigh, idx_neigh = ml.kneighbors(tsX, return_distance=True)
+        id_neigh   = ['; '.join([int(tr.index[i]) for i in idx]) for idx in idx_neigh]
+        dist_neigh = ['; '.join(d.astype(str)) for d in dist_neigh] 
+        
+        log['neighbor'] += id_neigh
+        log['distance'] += dist_neigh
         
         return log
         
     def _Save(self, target, trial, log_tr, log_cpdout, log_bothout, ml):
         
-        path_tr = os.path.join(self.logdir, "%s_tr_trial%d.tsv" %(target, trial))
-        self.log_tr = pd.DataFrame.from_dict(log_tr)
-        self.log_tr.to_csv(path_tr, sep="\t")
+        # path_tr = os.path.join(self.logdir, "%s_tr_trial%d.tsv" %(target, trial))
+        # self.log_tr = pd.DataFrame.from_dict(log_tr)
+        # self.log_tr.to_csv(path_tr, sep="\t")
         
         path_cpdout = os.path.join(self.logdir, "%s_cpdout_trial%d.tsv" %(target, trial))
         self.log_cpdout = pd.DataFrame.from_dict(log_cpdout)
@@ -138,9 +112,6 @@ class Classification(Base_wodirection):
         path_bothout = os.path.join(self.logdir, "%s_bothout_trial%d.tsv" %(target, trial))
         self.log_bothout = pd.DataFrame.from_dict(log_bothout)
         self.log_bothout.to_csv(path_bothout, sep="\t")
-
-        params = {key: val for key, val in ml.get_params().items() if key!='kernel'}
-        ToJson(params, self.modeldir+"/%s_trial%d.json"%(target, trial))
         
 
 def main(bd, model, mtype):
@@ -191,5 +162,5 @@ if __name__ == '__main__':
     #model = "Random_Forest"
     mtype = "axv"
     
-    debug(bd, model='SVM', mtype=mtype)
+    main(bd, model='1NN', mtype=mtype)
  

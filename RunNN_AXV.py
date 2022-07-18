@@ -251,11 +251,14 @@ class Classification(Base_wodirection):
     def _AllMMSPred(self, target):
         
         if self._IsPredictableTarget():
-            # Initialize
-            log = defaultdict(list) 
-
-            for trial in [2]:#self.testsetidx:    
+            
+            for trial in self.testsetidx:    
                 
+                # Initialize
+                log_tr      = defaultdict(list)
+                log_cpdout  = defaultdict(list) 
+                log_bothout = defaultdict(list) 
+            
                 if self.debug:
                     if trial>2:
                         break

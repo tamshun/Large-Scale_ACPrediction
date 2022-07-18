@@ -106,6 +106,48 @@ class Classification(Base_wodirection_CGR):
         
         return super()._SetML()
     
+    
+    def _AllMMSPred(self, target):
+        if self._IsPredictableTarget():
+            info = ACPredictionModel(target=target, debug=debug)
+            for loop in self.testsetidx:    
+                
+                if self.debug:
+                    if loop > 2:
+                        break
+                
+                # Train test split
+                print("    $ Prediction for loop%d is going on.\n" %loop)
+                tr, cpdout, bothout = self._GetTrainTest(loop)
+                trX, trY = tr[self.col], tr['class'].to_numpy()
+                cpdoutX , cpdoutY  = cpdout[self.col], cpdout['class'].to_numpy()
+                bothoutX, bothoutY = bothout[self.col], bothout['class'].to_numpy()
+                
+                
+                flag_predictable = self._IsPredictableSeries(tr, cpdout, min_npos=self.nfold) * self._IsPredictableSeries(tr, bothout, min_npos=p.nfold)
+                if flag_predictable:    
+                    # Fit and Predict
+                    pruner = optuna.pruners.MedianPruner()
+                    study  = optuna.create_study(pruner=pruner, direction='maximize')
+                    obj    = partial(objective, info=info, trX=trX, trY=trY)
+                    study.optimize(obj, n_trials=info.nepoch[2])
+                    
+                    best_args = info._set_arg_dict(study.best_params)
+                    w_pos     = int(np.where(trY==0)[0].shape[0] / np.where(trY==1)[0].shape[0])
+                    loss_fn   = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([w_pos]))
+                    mpn, dnn  = fit_bestparams(info, best_args, trX, trY, loss_fn)
+                    score_tr     , predY_tr     , proba_tr      = predict_bestparams(info, mpn, dnn, best_args, trX, trY, loss_fn)
+                    score_cpdout , predY_cpdout , proba_cpdout  = predict_bestparams(info, mpn, dnn, best_args, cpdoutX, cpdoutY, loss_fn)
+                    score_bothout, predY_bothout, proba_bothout = predict_bestparams(info, mpn, dnn, best_args, bothoutX, bothoutY, loss_fn)
+                    print("    $ Prediction Done.\n")
+                    
+                    # Write & save log
+                    log_tr      = self.WriteLog_tr(loop, tr, trY, predY_tr, proba_tr) 
+                    log_cpdout  = self.WriteLog_ts(loop, tr, cpdout, cpdoutY, predY_cpdout, proba_cpdout)
+                    log_bothout = self.WriteLog_ts(loop, tr, bothout, bothoutY, predY_bothout, proba_bothout)  
+                    self.Save(target, loop, log_tr, log_cpdout, log_bothout,best_args, mpn, dnn)
+                    print("    $  Log is out.\n")
+    
     def WriteLog_tr(self, loop, tr, trY, predY, proba):
         
         log = defaultdict(list)
@@ -440,51 +482,11 @@ def main(target, bd, debug=False):
                        dir_score  = './Score_%s/%s' %(mtype, model),
                        )
     
-    info = ACPredictionModel(target=target, debug=debug)
-    
     if not p._IsPredictableSet():
         print('    $ %s is skipped because of lack of the actives' %target)
     
     else:    
-        if p._IsPredictableTarget():
-            p._SetParams(target)
-            for loop in p.testsetidx:    
-                
-                if p.debug:
-                    if loop > 2:
-                        break
-                
-                # Train test split
-                print("    $ Prediction for loop%d is going on.\n" %loop)
-                tr, cpdout, bothout = p._GetTrainTest(loop)
-                trX, trY = tr[p.col], tr['class'].to_numpy()
-                cpdoutX , cpdoutY  = cpdout[p.col], cpdout['class'].to_numpy()
-                bothoutX, bothoutY = bothout[p.col], bothout['class'].to_numpy()
-                
-                
-                flag_predictable = p._IsPredictableSeries(tr, cpdout, min_npos=p.nfold) * p._IsPredictableSeries(tr, bothout, min_npos=p.nfold)
-                if flag_predictable:    
-                    # Fit and Predict
-                    pruner = optuna.pruners.MedianPruner()
-                    study  = optuna.create_study(pruner=pruner, direction='maximize')
-                    obj    = partial(objective, info=info, trX=trX, trY=trY)
-                    study.optimize(obj, n_trials=info.nepoch[2])
-                    
-                    best_args = info._set_arg_dict(study.best_params)
-                    w_pos     = int(np.where(trY==0)[0].shape[0] / np.where(trY==1)[0].shape[0])
-                    loss_fn   = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([w_pos]))
-                    mpn, dnn  = fit_bestparams(info, best_args, trX, trY, loss_fn)
-                    score_tr     , predY_tr     , proba_tr      = predict_bestparams(info, mpn, dnn, best_args, trX, trY, loss_fn)
-                    score_cpdout , predY_cpdout , proba_cpdout  = predict_bestparams(info, mpn, dnn, best_args, cpdoutX, cpdoutY, loss_fn)
-                    score_bothout, predY_bothout, proba_bothout = predict_bestparams(info, mpn, dnn, best_args, bothoutX, bothoutY, loss_fn)
-                    print("    $ Prediction Done.\n")
-                    
-                    # Write & save log
-                    log_tr      = p.WriteLog_tr(loop, tr, trY, predY_tr, proba_tr) 
-                    log_cpdout  = p.WriteLog_ts(loop, tr, cpdout, cpdoutY, predY_cpdout, proba_cpdout)
-                    log_bothout = p.WriteLog_ts(loop, tr, bothout, bothoutY, predY_bothout, proba_bothout)  
-                    p.Save(target, loop, log_tr, log_cpdout, log_bothout,best_args, mpn, dnn)
-                    print("    $  Log is out.\n")
+        p.run_parallel()
                     
             
 if __name__ == '__main__':    
