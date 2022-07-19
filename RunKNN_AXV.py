@@ -18,7 +18,7 @@ from sklearn.neighbors                   import KNeighborsClassifier
 from Kernels.Kernel                      import funcTanimotoKernel_MMPKernel
 from functools                           import partial
 
-#patch_sklearn()
+patch_sklearn()
 
 def distance_func(x, y, len_c):
     
@@ -45,10 +45,6 @@ class Classification(Base_wodirection):
 
             for trial in self.testsetidx:    
                 
-                log_tr      = defaultdict(list)
-                log_cpdout  = defaultdict(list) 
-                log_bothout = defaultdict(list) 
-                
                 if self.debug:
                     if trial>2:
                         break
@@ -65,9 +61,9 @@ class Classification(Base_wodirection):
                     ml.fit(trX, trY)
                     predY_cpdout  = ml.predict(cpdoutX) 
                     predY_bothout = ml.predict(bothoutX) 
-                    log_cpdout = self._WriteLog(log_cpdout , ml, trial, tr, cpdout , cpdoutX , cpdoutY , predY_cpdout)           
-                    log_cpdout = self._WriteLog(log_bothout, ml, trial, tr, bothout, bothoutX, bothoutY, predY_bothout)           
-                    self._Save(target, trial, log_tr, log_cpdout, log_bothout, ml)
+                    log_cpdout  = self._WriteLog(ml, trial, tr, cpdout , cpdoutX , cpdoutY , predY_cpdout)           
+                    log_bothout = self._WriteLog(ml, trial, tr, bothout, bothoutX, bothoutY, predY_bothout)           
+                    self._Save(target, trial, log_cpdout, log_bothout)
                     print("    $ Prediction Done.\n")
                     
                     # Write & save log
@@ -78,7 +74,9 @@ class Classification(Base_wodirection):
                 
             
             
-    def _WriteLog(self, log, ml, cid, tr, ts, tsX, tsY, predY):
+    def _WriteLog(self, ml, cid, tr, ts, tsX, tsY, predY):
+        
+        log = defaultdict(list)
         
         # Write log
         tsids            = ts["id"].tolist()
@@ -91,7 +89,7 @@ class Classification(Base_wodirection):
         log['prob']     += [p[1] for p in ml.predict_proba(tsX)]
 
         dist_neigh, idx_neigh = ml.kneighbors(tsX, return_distance=True)
-        id_neigh   = ['; '.join([int(tr.index[i]) for i in idx]) for idx in idx_neigh]
+        id_neigh   = ['; '.join([str(tr.index[i]) for i in idx]) for idx in idx_neigh]
         dist_neigh = ['; '.join(d.astype(str)) for d in dist_neigh] 
         
         log['neighbor'] += id_neigh
@@ -99,7 +97,7 @@ class Classification(Base_wodirection):
         
         return log
         
-    def _Save(self, target, trial, log_tr, log_cpdout, log_bothout, ml):
+    def _Save(self, target, trial, log_cpdout, log_bothout):
         
         # path_tr = os.path.join(self.logdir, "%s_tr_trial%d.tsv" %(target, trial))
         # self.log_tr = pd.DataFrame.from_dict(log_tr)
@@ -150,7 +148,7 @@ def debug(bd, model, mtype):
                        dir_log     = "./Log_%s/%s" %(mtype, model),
                        dir_score   = "./Score_%s/%s" %(mtype, model),
                        )
-    p.run('CHEMBL204')
+    p.run('CHEMBL2014')
     
 if __name__ == '__main__':
     
@@ -162,5 +160,5 @@ if __name__ == '__main__':
     #model = "Random_Forest"
     mtype = "axv"
     
-    main(bd, model='1NN', mtype=mtype)
+    debug(bd, model='1NN', mtype=mtype)
  

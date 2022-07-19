@@ -48,7 +48,7 @@ class Base_wodirection(Initialize):
                 self.predictable          = False
 
         
-    def _ReadDataFile(self, target, acbits=False):
+    def _ReadDataFile(self, target):
    
         self.main = pd.read_csv("./Dataset/Data/%s.tsv" %target, sep="\t", index_col=0) # Single class MMSs were removed in curation.py.
         self.ecfp = pd.read_csv("./Dataset/ECFP/%s.tsv" %target, sep="\t", index_col=0)

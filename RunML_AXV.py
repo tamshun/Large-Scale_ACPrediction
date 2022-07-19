@@ -68,10 +68,6 @@ class Classification(Base_wodirection):
 
             for trial in self.testsetidx:    
                 
-                log_tr      = defaultdict(list)
-                log_cpdout  = defaultdict(list) 
-                log_bothout = defaultdict(list) 
-                
                 if self.debug:
                     if trial>2:
                         break
@@ -91,9 +87,9 @@ class Classification(Base_wodirection):
                     print("    $ Prediction Done.\n")
                     
                     # Write & save log
-                    log_tr      = self._WriteLog(log_tr     , ml, trial, tr, tr , trX , trY , predY_tr)           
-                    log_cpdout  = self._WriteLog(log_cpdout , ml, trial, tr, cpdout , cpdoutX , cpdoutY , predY_cpdout)           
-                    log_bothout = self._WriteLog(log_bothout, ml, trial, tr, bothout, bothoutX, bothoutY, predY_bothout)           
+                    log_tr      = self._WriteLog(ml, trial, tr, tr , trX , trY , predY_tr)           
+                    log_cpdout  = self._WriteLog(ml, trial, tr, cpdout , cpdoutX , cpdoutY , predY_cpdout)           
+                    log_bothout = self._WriteLog(ml, trial, tr, bothout, bothoutX, bothoutY, predY_bothout)           
             
                     self._Save(target, trial, log_tr, log_cpdout, log_bothout, ml)
                     print("    $  Log is out.\n")
@@ -102,7 +98,9 @@ class Classification(Base_wodirection):
                 
             
             
-    def _WriteLog(self, log, ml, cid, tr, ts, tsX, tsY, predY):
+    def _WriteLog(self, ml, cid, tr, ts, tsX, tsY, predY):
+        
+        log = defaultdict(list)
         
         # Write log
         tsids            = ts["id"].tolist()
@@ -143,7 +141,9 @@ class Classification(Base_wodirection):
         ToJson(params, self.modeldir+"/%s_trial%d.json"%(target, trial))
         
 
-def main(bd, model, mtype):
+def main(bd, model):
+    
+    mtype = "axv"
     
     os.chdir(bd)
     os.makedirs("./Log_%s"%mtype  , exist_ok=True)
@@ -160,7 +160,10 @@ def main(bd, model, mtype):
     print(' $ %s is selected as machine learning method'%model)    
     p.run_parallel(tlist['chembl_tid'], njob=-1)
 
-def debug(bd, model, mtype):
+def debug(bd, model):
+    
+    mtype = "axv"
+    
     os.chdir(bd)
     os.makedirs("./Log_%s"%mtype  , exist_ok=True)
     os.makedirs("./Score_%s"%mtype, exist_ok=True)
@@ -174,7 +177,7 @@ def debug(bd, model, mtype):
                        dir_log     = "./Log_%s/%s" %(mtype, model),
                        dir_score   = "./Score_%s/%s" %(mtype, model),
                        )
-    p.run('CHEMBL204')
+    p.run('CHEMBL204', debug=True)
     
 if __name__ == '__main__':
     
@@ -184,7 +187,10 @@ if __name__ == '__main__':
         bd    = "/home/tamuras0/work/ACPredCompare/"
         
     #model = "Random_Forest"
-    mtype = "axv"
     
-    debug(bd, model='SVM', mtype=mtype)
+    
+    main(bd, model='SVM')
+    main(bd, model='Random_Forest')
+    main(bd, model='XGBoost')
+    
  

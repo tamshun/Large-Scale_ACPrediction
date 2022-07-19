@@ -414,10 +414,9 @@ class Initialize():
         
         print("\n----- %s is proceeding -----\n" %target)
         
-        if debug:
-            self.debug=True
+        self.debug = debug
         
-        self.main, self.cgr = self._ReadDataFile(target, acbits=self.aconly)
+        self._ReadDataFile(target)
         
         if load_params:
             self._SetParams(target)
@@ -427,15 +426,14 @@ class Initialize():
             
             if self._IsPredictableSet():
                 self._SetParams(target)
-                self.fixed_arg = self._set_fixedargs()
                 self._AllMMSPred(target)
                 
             else:
                 print('    $ %s is skipped because of lack of the actives' %target) 
                 
 
-    def run_parallel(self, target_list, njob=-1):
-        result = joblib.Parallel(n_jobs=njob)(joblib.delayed(self.run)(target) for target in target_list)
+    # def run_parallel(self, target_list, njob=-1):
+    #     result = joblib.Parallel(n_jobs=njob)(joblib.delayed(self.run)(target) for target in target_list)
     
         
     def run_parallel(self, target_list, load_params=False, njob=-1):
