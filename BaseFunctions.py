@@ -54,7 +54,7 @@ class Base_wodirection(Initialize):
         self.ecfp = pd.read_csv("./Dataset/ECFP/%s.tsv" %target, sep="\t", index_col=0)
 
 
-    def _GetMatrices(self, cid):
+    def _GetMatrices(self, cid, separated_input=False):
         '''
         Wrapper function of TrainTestSplit_main, TrainTestSplit_ecfp, Hash2Bits 
         '''
@@ -64,7 +64,11 @@ class Base_wodirection(Initialize):
             
             df_trX, df_tsX = self._TrainTestSplit_ecfp(tr, ts)
             
-            df_trY, df_tsY, trX, trY, tsX, tsY = self._Hash2Bits(tr, ts, df_trX, df_tsX)
+            if not separated_input:
+                df_trY, df_tsY, trX, trY, tsX, tsY = self._Hash2Bits(tr, ts, df_trX, df_tsX)
+                
+            elif separated_input:
+                df_trY, df_tsY, trX, trY, tsX, tsY = self._Hash2Bits(tr, ts, df_trX, df_tsX)
 
             return tr, ts, df_trX, df_trY, df_tsX, df_tsY, trX, trY, tsX, tsY
         
@@ -73,7 +77,11 @@ class Base_wodirection(Initialize):
             
             df_trX, df_cpdoutX, df_bothoutX = self._TrainTestSplit_ecfp_axv(tr, cpdout, bothout)
             
-            df_trY, df_cpdoutY, df_bothoutY, trX, trY, cpdoutX, cpdoutY, bothoutX, bothoutY = self._Hash2Bits_axv(tr, cpdout, bothout, df_trX, df_cpdoutX, df_bothoutX)
+            if not separated_input:
+                df_trY, df_cpdoutY, df_bothoutY, trX, trY, cpdoutX, cpdoutY, bothoutX, bothoutY = self._Hash2Bits_axv(tr, cpdout, bothout, df_trX, df_cpdoutX, df_bothoutX)
+                
+            elif separated_input:
+                df_trY, df_cpdoutY, df_bothoutY, trX, trY, cpdoutX, cpdoutY, bothoutX, bothoutY = self._Hash2Bits_axv(tr, cpdout, bothout, df_trX, df_cpdoutX, df_bothoutX)
             
             return tr, cpdout, bothout, df_trX, df_trY, df_cpdoutX, df_cpdoutY, df_bothoutX, df_bothoutY, trX, trY, cpdoutX, cpdoutY, bothoutX, bothoutY
     
@@ -106,6 +114,16 @@ class Base_wodirection(Initialize):
 
         return df_trY, df_tsY, trX, trY, tsX, tsY
     
+    def _Hash2Bits_separated(self, tr, ts, df_trX, df_tsX):
+        
+        df_trY = tr["class"]
+        df_tsY = ts["class"]
+
+        forward  = Hash2Bits(subdiff=False, sub_reverse=False)
+        trX, trY = forward.GetSeparatedfingerprints_DF_unfold(df=df_trX, cols=self.col, Y=df_trY, nbits=[self.nbits_c, self.nbits_s], overlap="concat")
+        tsX, tsY = forward.GetSeparatedfingerprints_DF_unfold(df=df_tsX, cols=self.col, Y=df_tsY, nbits=[self.nbits_c, self.nbits_s], overlap="concat")
+
+        return df_trY, df_tsY, trX, trY, tsX, tsY
     
     def _TrainTestSplit_main_axv(self, cid):
         
@@ -139,6 +157,19 @@ class Base_wodirection(Initialize):
 
         return df_trY, df_cpdoutY, df_bothoutY, trX, trY, cpdoutX, cpdoutY, bothoutX, bothoutY
     
+    
+    def _Hash2Bits_separated_axv(self, tr, cpdout, bothout, df_trX, df_cpdoutX, df_bothoutX):
+        
+        df_trY      = tr["class"]
+        df_cpdoutY  = cpdout["class"]
+        df_bothoutY = bothout["class"]
+
+        forward            = Hash2Bits(subdiff=False, sub_reverse=False)
+        trX     , trY      = forward.GetSeparatedfingerprints_DF_unfold(df=df_trX, cols=self.col, Y=df_trY, nbits=[self.nbits_c, self.nbits_s], overlap="concat")
+        cpdoutX , cpdoutY  = forward.GetSeparatedfingerprints_DF_unfold(df=df_cpdoutX , cols=self.col, Y=df_cpdoutY , nbits=[self.nbits_c, self.nbits_s], overlap="concat")
+        bothoutX, bothoutY = forward.GetSeparatedfingerprints_DF_unfold(df=df_bothoutX, cols=self.col, Y=df_bothoutY, nbits=[self.nbits_c, self.nbits_s], overlap="concat")
+
+        return df_trY, df_cpdoutY, df_bothoutY, trX, trY, cpdoutX, cpdoutY, bothoutX, bothoutY
     
     def _GetMatrices_3parts(self, cid):
         '''
