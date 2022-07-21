@@ -68,7 +68,7 @@ class Base_wodirection(Initialize):
                 df_trY, df_tsY, trX, trY, tsX, tsY = self._Hash2Bits(tr, ts, df_trX, df_tsX)
                 
             elif separated_input:
-                df_trY, df_tsY, trX, trY, tsX, tsY = self._Hash2Bits(tr, ts, df_trX, df_tsX)
+                df_trY, df_tsY, trX, trY, tsX, tsY = self._Hash2Bits_separated(tr, ts, df_trX, df_tsX)
 
             return tr, ts, df_trX, df_trY, df_tsX, df_tsY, trX, trY, tsX, tsY
         
@@ -81,7 +81,7 @@ class Base_wodirection(Initialize):
                 df_trY, df_cpdoutY, df_bothoutY, trX, trY, cpdoutX, cpdoutY, bothoutX, bothoutY = self._Hash2Bits_axv(tr, cpdout, bothout, df_trX, df_cpdoutX, df_bothoutX)
                 
             elif separated_input:
-                df_trY, df_cpdoutY, df_bothoutY, trX, trY, cpdoutX, cpdoutY, bothoutX, bothoutY = self._Hash2Bits_axv(tr, cpdout, bothout, df_trX, df_cpdoutX, df_bothoutX)
+                df_trY, df_cpdoutY, df_bothoutY, trX, trY, cpdoutX, cpdoutY, bothoutX, bothoutY = self._Hash2Bits_separated_axv(tr, cpdout, bothout, df_trX, df_cpdoutX, df_bothoutX)
             
             return tr, cpdout, bothout, df_trX, df_trY, df_cpdoutX, df_cpdoutY, df_bothoutX, df_bothoutY, trX, trY, cpdoutX, cpdoutY, bothoutX, bothoutY
     
@@ -120,8 +120,8 @@ class Base_wodirection(Initialize):
         df_tsY = ts["class"]
 
         forward  = Hash2Bits(subdiff=False, sub_reverse=False)
-        trX, trY = forward.GetSeparatedfingerprints_DF_unfold(df=df_trX, cols=self.col, Y=df_trY, nbits=[self.nbits_c, self.nbits_s], overlap="concat")
-        tsX, tsY = forward.GetSeparatedfingerprints_DF_unfold(df=df_tsX, cols=self.col, Y=df_tsY, nbits=[self.nbits_c, self.nbits_s], overlap="concat")
+        trX, trY = forward.GetSeparatedfingerprints_DF_unfold(df=df_trX, cols=self.col, Y=df_trY, nbits=[self.nbits_c, self.nbits_s])
+        tsX, tsY = forward.GetSeparatedfingerprints_DF_unfold(df=df_tsX, cols=self.col, Y=df_tsY, nbits=[self.nbits_c, self.nbits_s])
 
         return df_trY, df_tsY, trX, trY, tsX, tsY
     
