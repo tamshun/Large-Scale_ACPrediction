@@ -70,26 +70,29 @@ class FullyConnectedNN(nn.Module):
 
     def forward(self, x):
         return self.W(x)  
-       
-       
+    
+    
 def train(dnn_c, dnn_s1, dnn_s2, dnn_cat, dataloader, optimizer, loss_fn, cuda, verbose=1):
 
+    device  = 'cuda' if cuda else 'cpu'  
+    
     if cuda:
         dnn_c   = dnn_c.cuda()
         dnn_s1  = dnn_s1.cuda()
         dnn_s2  = dnn_s2.cuda()
         dnn_cat = dnn_cat.cuda()
         loss_fn = loss_fn.cuda()
-        
-    device  = 'cuda' if cuda else 'cpu'    
+          
         
     size = len(dataloader.dataset)
     
     n_usedtr = 0
     for batch, (X_c, X_s1, X_s2, y) in enumerate(dataloader):
         
+        X_c, X_s1, X_s2, y = X_c.to(device), X_s1.to(device), X_s2.to(device), y.to(device)
+        
         score = predict(dnn_c, dnn_s1, dnn_s2, dnn_cat, X_c, X_s1, X_s2)
-        loss  = loss_fn(score, y.to(device))
+        loss  = loss_fn(score, y)
         
         # back propagation
         optimizer.zero_grad()
@@ -121,6 +124,8 @@ def test(dnn_c, dnn_s1, dnn_s2, dnn_cat, dataloader, loss_fn, cuda):
     
     with torch.no_grad():
         for X_c, X_s1, X_s2, y in dataloader:
+            
+            X_c, X_s1, X_s2, y = X_c.to(device), X_s1.to(device), X_s2.to(device), y.to(device)
             
             pred_score  = predict(dnn_c, dnn_s1, dnn_s2, dnn_cat, X_c, X_s1, X_s2)
             proba       = predict_proba(pred_score)
@@ -179,21 +184,21 @@ def objective(trial, trX, trY, nfold, nepoch):
                   DNNLayerNum_c   = trial.suggest_int("DNNLayerNum_c", 1, 4),
                   DNNLayerNum_s   = trial.suggest_int("DNNLayerNum_s", 1, 4),
                   DNNLayerNum_cat = trial.suggest_int("DNNLayerNum_cat", 2, 8),
-                  dim_c           = int(trial.suggest_discrete_uniform("dim_c", 70, 100, 10)),
-                  dim_s           = int(trial.suggest_discrete_uniform("dim_s", 70, 100, 10)),
+                  dim_c           = trial.suggest_int("dim_c", 70, 100, 10),
+                  dim_s           = trial.suggest_int("dim_s", 70, 100, 10),
                   adam_lr         = trial.suggest_loguniform('adam_lr', 1e-4, 1e-2),              
                 )
     
-    args['step_size']  = int(args['train_num']/args['step_num'])
     args.update(optarg)
+    args['step_size']  = int(args['train_num']/args['step_num'])
     
     args_c = args.copy()
     args_c['grad_node']  = int((args['nbits_c'] - args['dim_c'])/ args['DNNLayerNum_c'])
-    args_c['node_list']  = [int(args['nbits_c'] - args_c['grad_node']*num) for num in range(args['DNNLayerNum_c'])]
+    args_c['node_list']  = [int(args['nbits_c'] - args_c['grad_node']*num) for num in range(args['DNNLayerNum_c'])] + [args['dim_c']]
     
     args_s = args.copy()
-    args_s['grad_node']  = int(args['nbits_s']/ args['DNNLayerNum_s'])
-    args_s['node_list']  = [int(args['nbits_s'] - args_s['grad_node']*num) for num in range(args['DNNLayerNum_s'])]
+    args_s['grad_node']  = int((args['nbits_s'] - args['dim_s'])/ args['DNNLayerNum_s'])
+    args_s['node_list']  = [int(args['nbits_s'] - args_s['grad_node']*num) for num in range(args['DNNLayerNum_s'])] + [args['dim_s']]
     
     args_cat = args.copy()
     args_cat['grad_node']  = int((args['dim_c'] + 2*args['dim_s']) / args['DNNLayerNum_cat'])
@@ -205,7 +210,7 @@ def objective(trial, trX, trY, nfold, nepoch):
     dataset       = Dataset(fpset=trX, label=trY)
     kfold         = StratifiedKFold(n_splits=nfold, shuffle=True, random_state=0)
     score_cv      = []
-    for _fold, (idx_tr, idx_vl) in enumerate(kfold.split(trX, trY)):
+    for _fold, (idx_tr, idx_vl) in enumerate(kfold.split(trX['core'], trY)):
         dataset_tr    = Subset(dataset, idx_tr)
         dataloader_tr = DataLoader(dataset_tr, args['batch_size'], shuffle=True)
         dataset_vl    = Subset(dataset, idx_vl)
@@ -224,8 +229,8 @@ def objective(trial, trX, trY, nfold, nepoch):
     
     # training
         for step in range(EPOCH):
-            train(dnn_c, dnn_s1, dnn_s2, dnn_cat, device, loss_fn, optimizer, dataloader_tr, args['cuda'])
-            predY_score, predY, proba = test(dnn_c, dnn_s1, dnn_s2, dnn_cat, loss_fn, dataloader_vl, args['cuda'])
+            train(dnn_c, dnn_s1, dnn_s2, dnn_cat, dataloader_tr, optimizer, loss_fn, args['cuda'])
+            predY_score, predY, proba = test(dnn_c, dnn_s1, dnn_s2, dnn_cat, dataloader_vl, loss_fn, args['cuda'])
             score = roc_auc_score(y_true=trY[idx_vl], y_score=proba)
             scheduler.step()
             
@@ -247,13 +252,13 @@ class Classification(Base_wodirection):
     def _Setnepoch(self):
         
         if self.debug:
-            nepoch = [2, 2, 2]
+            nepoch = [3, 3, 3]
         else:
             nepoch = [50, 100, 100]
             
         return nepoch
     
-    def _fit_bestparams(args_c, args_s, args_cat, trX, trY, loss_fn):
+    def _fit_bestparams(self, args_c, args_s, args_cat, trX, trY, loss_fn):
     
         dataloader_tr = DataLoader(Dataset(fpset=trX, label=trY),
                                     shuffle=True,
@@ -266,7 +271,7 @@ class Classification(Base_wodirection):
         dnn_cat   = FullyConnectedNN(args_cat).to(args_cat['device'])
         
         opt_list  = list(dnn_c.parameters()) + list(dnn_s1.parameters()) + list(dnn_s2.parameters()) + list(dnn_cat.parameters())
-        optimizer = torch.optim.Adam(opt_list, lr=args_cat['lr'])
+        optimizer = torch.optim.Adam(opt_list, lr=args_cat['adam_lr'])
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args_cat['step_size'], gamma=args_cat['gamma'])
         
         EPOCH = args_cat['train_num']
@@ -277,7 +282,7 @@ class Classification(Base_wodirection):
         return dnn_c, dnn_s1, dnn_s2, dnn_cat
             
 
-    def _predict_bestparams(dnn_c, dnn_s1, dnn_s2, dnn_cat, args, tsX, tsY, loss_fn):
+    def _predict_bestparams(self, dnn_c, dnn_s1, dnn_s2, dnn_cat, args, tsX, tsY, loss_fn):
         
         dataloader_ts = DataLoader(Dataset(fpset=tsX, label=tsY),
                                    batch_size=args['batch_size'],
@@ -297,7 +302,7 @@ class Classification(Base_wodirection):
             log = defaultdict(list) 
             self.nepoch = self._Setnepoch()
 
-            for trial in [2]:#self.testsetidx:    
+            for trial in self.testsetidx:    
                 
                 if self.debug:
                     if trial>2:
@@ -331,11 +336,11 @@ class Classification(Base_wodirection):
 
                     args_c = args.copy()
                     args_c['grad_node']  = int((args['nbits_c'] - args['dim_c'])/ args['DNNLayerNum_c'])
-                    args_c['node_list']  = [int(args['nbits_c'] - args_c['grad_node']*num) for num in range(args['DNNLayerNum_c'])]
+                    args_c['node_list']  = [int(args['nbits_c'] - args_c['grad_node']*num) for num in range(args['DNNLayerNum_c'])] + [args['dim_c']]
 
                     args_s = args.copy()
-                    args_s['grad_node']  = int(args['nbits_s']/ args['DNNLayerNum_s'])
-                    args_s['node_list']  = [int(args['nbits_s'] - args_s['grad_node']*num) for num in range(args['DNNLayerNum_s'])]
+                    args_s['grad_node']  = int((args['nbits_s'] - args['dim_s'])/ args['DNNLayerNum_s'])
+                    args_s['node_list']  = [int(args['nbits_s'] - args_s['grad_node']*num) for num in range(args['DNNLayerNum_s'])] + [args['dim_s']]
 
                     args_cat = args.copy()
                     args_cat['grad_node']  = int((args['dim_c'] + 2*args['dim_s']) / args['DNNLayerNum_cat'])
@@ -414,7 +419,7 @@ def main(bd):
     
     #Initialize   
     model = "FCNN"
-    mtype = "trtsslpit"
+    mtype = "wodirection_trtsslpit"
     
     tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
     #tlist = tlist.loc[tlist['machine1'],:]
@@ -436,11 +441,11 @@ def debug(bd):
     
     #Initialize   
     model = "FCNN"
-    mtype = "trtsplit"
+    mtype = "wodirection_trtsplit"
     mtype +='_debug'
     
     tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
-    tlist = tlist.loc[tlist['machine1'],:]
+    #tlist = tlist.loc[tlist['machine1'],:]
         
     os.chdir(bd)
     os.makedirs("./Log_%s"%mtype, exist_ok=True)
@@ -458,6 +463,6 @@ def debug(bd):
 if __name__ == '__main__':    
     
     #bd = '/home/bit/tamuras0/ACPredCompare'
-    bd = '/home/tamura/work/ACPredCompare'
+    bd = '/home/tamuras0/work/ACPredCompare'
     
     debug(bd)
