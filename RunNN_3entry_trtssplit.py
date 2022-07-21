@@ -179,8 +179,8 @@ def objective(trial, trX, trY, nfold, nepoch):
                   DNNLayerNum_c   = trial.suggest_int("DNNLayerNum_c", 1, 4),
                   DNNLayerNum_s   = trial.suggest_int("DNNLayerNum_s", 1, 4),
                   DNNLayerNum_cat = trial.suggest_int("DNNLayerNum_cat", 2, 8),
-                  dim_c           = int(trial.suggest_discrete_uniform("dim_c", 70, 100, 10))
-                  dim_s           = int(trial.suggest_discrete_uniform("dim_s", 70, 100, 10))
+                  dim_c           = int(trial.suggest_discrete_uniform("dim_c", 70, 100, 10)),
+                  dim_s           = int(trial.suggest_discrete_uniform("dim_s", 70, 100, 10)),
                   adam_lr         = trial.suggest_loguniform('adam_lr', 1e-4, 1e-2),              
                 )
     
@@ -295,6 +295,7 @@ class Classification(Base_wodirection):
         if self._IsPredictableTarget():
             # Initialize
             log = defaultdict(list) 
+            self.nepoch = self._Setnepoch()
 
             for trial in [2]:#self.testsetidx:    
                 
@@ -451,12 +452,12 @@ def debug(bd):
                        dir_score  = './Score_%s/%s' %(mtype, model),
                        )
                     
-    p.run('CHEMBL204')
+    p.run('CHEMBL204', debug=True)
                     
             
 if __name__ == '__main__':    
     
     #bd = '/home/bit/tamuras0/ACPredCompare'
-    bd = '/home/tamuras0/work/ACPredCompare'
+    bd = '/home/tamura/work/ACPredCompare'
     
-    main(bd)
+    debug(bd)
