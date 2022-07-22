@@ -148,17 +148,23 @@ def debug(bd, model, mtype):
                        dir_log     = "./Log_%s/%s" %(mtype, model),
                        dir_score   = "./Score_%s/%s" %(mtype, model),
                        )
-    p.run('CHEMBL2014')
+    p.run('CHEMBL1800', debug=True)
     
 if __name__ == '__main__':
     
     if platform.system() == 'Darwin':
         bd    = "/Users/tamura/work/ACPredCompare/"
+        
+    elif platform.system() == 'Linux':
+        bd    = "/home/tamura/work/ACPredCompare/"
+        
     else:
         bd    = "/home/tamuras0/work/ACPredCompare/"
         
     #model = "Random_Forest"
     mtype = "axv"
     
-    debug(bd, model='1NN', mtype=mtype)
+    #debug(bd, model='1NN', mtype=mtype)
+    main(bd, model='1NN', mtype=mtype)
+    main(bd, model='5NN', mtype=mtype)
  
