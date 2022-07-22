@@ -382,7 +382,7 @@ def main(bd):
                        dir_score  = './Score_%s/%s' %(mtype, model),
                        )
                     
-    p.run_parallel(tlist['chembl_tid'], njob=4)
+    p.run_parallel(tlist['chembl_tid'], njob=3)
     
 
 def debug(bd):
@@ -411,7 +411,7 @@ def debug(bd):
 if __name__ == '__main__':    
     
     #bd = '/home/bit/tamuras0/ACPredCompare'
-    bd = '/home/tamuras0/work/ACPredCompare'
+    bd = '/home/tamura/work/ACPredCompare'
     
     main(bd)
         
