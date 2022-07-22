@@ -474,10 +474,10 @@ def predict_proba(X):
     return out
       
                 
-def main(target, bd, debug=False):
+def main(bd):
     
     #Initialize   
-    model = "MPNN"
+    model = "MPNN_separated"
     mtype = "axv"
     
     tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
@@ -498,7 +498,7 @@ def main(target, bd, debug=False):
 def debug(bd):
     
     #Initialize   
-    model = "MPNN"
+    model = "MPNN_separated"
     mtype = "axv"
     mtype +='_debug'
     
@@ -522,4 +522,4 @@ if __name__ == '__main__':
     #bd = '/home/bit/tamuras0/ACPredCompare'
     bd = '/home/tamura/work/ACPredCompare'
     
-    debug(bd)
+    main(bd)

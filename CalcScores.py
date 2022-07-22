@@ -107,7 +107,7 @@ if __name__ == '__main__':
     else:
         bd    = "/home/tamuras0/work/ACPredCompare/"
     
-    ml = 'MPNN_separated'
+    ml = 'FCNN_separated'
     # corr_ml = 'Random_Forest'
     # model = ml + '/' + corr_ml
     model = ml

@@ -165,9 +165,9 @@ class Base_wodirection(Initialize):
         df_bothoutY = bothout["class"]
 
         forward            = Hash2Bits(subdiff=False, sub_reverse=False)
-        trX     , trY      = forward.GetSeparatedfingerprints_DF_unfold(df=df_trX, cols=self.col, Y=df_trY, nbits=[self.nbits_c, self.nbits_s], overlap="concat")
-        cpdoutX , cpdoutY  = forward.GetSeparatedfingerprints_DF_unfold(df=df_cpdoutX , cols=self.col, Y=df_cpdoutY , nbits=[self.nbits_c, self.nbits_s], overlap="concat")
-        bothoutX, bothoutY = forward.GetSeparatedfingerprints_DF_unfold(df=df_bothoutX, cols=self.col, Y=df_bothoutY, nbits=[self.nbits_c, self.nbits_s], overlap="concat")
+        trX     , trY      = forward.GetSeparatedfingerprints_DF_unfold(df=df_trX, cols=self.col, Y=df_trY, nbits=[self.nbits_c, self.nbits_s])
+        cpdoutX , cpdoutY  = forward.GetSeparatedfingerprints_DF_unfold(df=df_cpdoutX , cols=self.col, Y=df_cpdoutY , nbits=[self.nbits_c, self.nbits_s])
+        bothoutX, bothoutY = forward.GetSeparatedfingerprints_DF_unfold(df=df_bothoutX, cols=self.col, Y=df_bothoutY, nbits=[self.nbits_c, self.nbits_s])
 
         return df_trY, df_cpdoutY, df_bothoutY, trX, trY, cpdoutX, cpdoutY, bothoutX, bothoutY
     
