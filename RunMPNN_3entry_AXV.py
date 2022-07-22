@@ -95,9 +95,9 @@ class DeepNeuralNetwork(nn.Module):
 
 class Classification(Base_wodirection_CGR):
 
-    def __init__(self, target, modeltype, model, dir_log, dir_score, data_split_metric='axv', debug=False):
+    def __init__(self, modeltype, model, dir_log, dir_score, data_split_metric='axv', debug=False):
 
-        super().__init__(target, modeltype, dir_log=dir_log, dir_score=dir_score, data_split_metric=data_split_metric)
+        super().__init__(modeltype, dir_log=dir_log, dir_score=dir_score, data_split_metric=data_split_metric)
 
         self.pred_type = "classification"
         self.mname     = model
@@ -110,6 +110,69 @@ class Classification(Base_wodirection_CGR):
         
         return super()._SetML()
     
+    
+    def _AllMMSPred(self, target):
+        
+        if self._IsPredictableTarget():
+            
+            cols = ['core', 'sub1', 'sub2']
+    
+            info = ACPredictionModel(target=target, debug=self.debug)
+            self._SetParams(target)
+            for loop in self.testsetidx:    
+                
+                if self.debug:
+                    if loop > 2:
+                        break
+                
+                # Train test split
+                print("    $ Prediction for loop%d is going on.\n" %loop)
+                tr, cpdout, bothout = self._GetTrainTest(loop)
+                trX, trY = tr[cols], tr['class'].to_numpy()
+                cpdoutX , cpdoutY  = cpdout[cols], cpdout['class'].to_numpy()
+                bothoutX, bothoutY = bothout[cols], bothout['class'].to_numpy()
+                
+                flag_predictable = self._IsPredictableSeries(tr, cpdout, min_npos=self.nfold) * self._IsPredictableSeries(tr, bothout, min_npos=self.nfold)
+                if flag_predictable:
+                    
+                    # Fit and Predict
+                    pruner = optuna.pruners.MedianPruner()
+                    study  = optuna.create_study(pruner=pruner, direction='maximize')
+                    obj    = partial(objective, info=info, trX=trX, trY=trY)
+                    study.optimize(obj, n_trials=info.nepoch[2])
+                    
+                    best_args = study.best_params
+                    
+                    args_mpn_c = dict(dim = best_args['dim'], ConvNum = best_args['ConvNum'])
+                    args_mpn_c = info._set_arg_dict(args_mpn_c)
+                    
+                    args_mpn_s = dict(dim = best_args['dim'], ConvNum = best_args['ConvNum'])
+                    args_mpn_s = info._set_arg_dict(args_mpn_s)
+                    
+                    args_dnn = dict(dropout = best_args['dropout'], step_num = best_args["step_num"], DNNLayerNum = best_args['DNNLayerNum'], lr = best_args['lr'])
+                    args_dnn = info._set_arg_dict(args_dnn)
+                    args_dnn['dim']        = int(args_mpn_c['dim']+2*args_mpn_s['dim'])
+                    args_dnn['step_size']  = int(args_dnn['train_num']/args_dnn['step_num'])
+                    args_dnn['grad_node']  = int(args_dnn['dim'] / args_dnn['DNNLayerNum'])
+                    args_dnn['node_list']  = [int(args_dnn['dim'] - args_dnn['grad_node']*num) for num in range(args_dnn['DNNLayerNum'])] + [1]
+                                    
+                    w_pos     = int(np.where(trY==0)[0].shape[0] / np.where(trY==1)[0].shape[0])
+                    loss_fn   = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([w_pos]))
+                    mpn_c, mpn_s1, mpn_s2, dnn  = fit_bestparams(info, args_dnn, args_mpn_c, args_mpn_s, trX, trY, loss_fn)
+                    score_tr     , predY_tr     , proba_tr      = predict_bestparams(info, mpn_c, mpn_s1, mpn_s2, dnn, args_dnn, trX, trY, loss_fn)
+                    score_cpdout , predY_cpdout , proba_cpdout  = predict_bestparams(info, mpn_c, mpn_s1, mpn_s2, dnn, args_dnn, cpdoutX, cpdoutY, loss_fn)
+                    score_bothout, predY_bothout, proba_bothout = predict_bestparams(info, mpn_c, mpn_s1, mpn_s2, dnn, args_dnn, bothoutX, bothoutY, loss_fn)
+                    print("    $ Prediction Done.\n")
+                    
+                    # Write & save log
+                    log_tr = self.WriteLog_tr(loop, tr, trY, predY_tr, proba_tr) 
+                    log_cpdout = self.WriteLog_ts(loop, tr, cpdout, cpdoutY, predY_cpdout, proba_cpdout)
+                    log_bothout = self.WriteLog_ts(loop, tr, bothout, bothoutY, predY_bothout, proba_bothout)  
+                    self.Save(target, loop, log_tr, log_cpdout, log_bothout, args_mpn_c, args_mpn_s, args_dnn, mpn_c, mpn_s1, mpn_s2, dnn)
+                    print("    $  Log is out.\n")
+    
+       
+        
     def WriteLog_tr(self, loop, tr, trY, predY, proba):
         
         log = defaultdict(list)
@@ -414,101 +477,49 @@ def predict_proba(X):
 def main(target, bd, debug=False):
     
     #Initialize   
-    model = "MPNN_separated"
+    model = "MPNN"
     mtype = "axv"
     
-    if debug:
-        mtype +='_debug'
+    tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
     
     os.chdir(bd)
     os.makedirs("./Log_%s"%mtype, exist_ok=True)
     os.makedirs("./Score_%s"%mtype, exist_ok=True)
     
-    cols = ['core', 'sub1', 'sub2']
-    
-    p = Classification(target     = target, 
-                       modeltype  = mtype,
+    p = Classification(modeltype  = mtype,
                        model      = model,
                        dir_log    = './Log_%s/%s' %(mtype, model),
                        dir_score  = './Score_%s/%s' %(mtype, model),
                        )
+                    
+    p.run_parallel(tlist['chembl_tid'], njob=6)
+
     
-    info = ACPredictionModel(target=target, debug=debug)
+def debug(bd):
     
-    if not p._IsPredictableSet():
-        print('    $ %s is skipped because of lack of the actives' %target)
+    #Initialize   
+    model = "MPNN"
+    mtype = "axv"
+    mtype +='_debug'
     
-    else:    
-        if p._IsPredictableTarget():
-            p._SetParams(target)
-            for loop in p.testsetidx:    
-                
-                if p.debug:
-                    if loop > 2:
-                        break
-                
-                # Train test split
-                print("    $ Prediction for loop%d is going on.\n" %loop)
-                tr, cpdout, bothout = p._GetTrainTest(loop)
-                trX, trY = tr[cols], tr['class'].to_numpy()
-                cpdoutX , cpdoutY  = cpdout[cols], cpdout['class'].to_numpy()
-                bothoutX, bothoutY = bothout[cols], bothout['class'].to_numpy()
-                
-                flag_predictable = p._IsPredictableSeries(tr, cpdout, min_npos=p.nfold) * p._IsPredictableSeries(tr, bothout, min_npos=p.nfold)
-                if flag_predictable:
+    tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
+    tlist = tlist.loc[tlist['machine1'],:]
+        
+    os.chdir(bd)
+    os.makedirs("./Log_%s"%mtype, exist_ok=True)
+    os.makedirs("./Score_%s"%mtype, exist_ok=True)
+    
+    p = Classification(modeltype  = mtype,
+                       model      = model,
+                       dir_log    = './Log_%s/%s' %(mtype, model),
+                       dir_score  = './Score_%s/%s' %(mtype, model),
+                       )
                     
-                    # Fit and Predict
-                    pruner = optuna.pruners.MedianPruner()
-                    study  = optuna.create_study(pruner=pruner, direction='maximize')
-                    obj    = partial(objective, info=info, trX=trX, trY=trY)
-                    study.optimize(obj, n_trials=info.nepoch[2])
-                    
-                    best_args = study.best_params
-                    
-                    args_mpn_c = dict(dim = best_args['dim'], ConvNum = best_args['ConvNum'])
-                    args_mpn_c = info._set_arg_dict(args_mpn_c)
-                    
-                    args_mpn_s = dict(dim = best_args['dim'], ConvNum = best_args['ConvNum'])
-                    args_mpn_s = info._set_arg_dict(args_mpn_s)
-                    
-                    args_dnn = dict(dropout = best_args['dropout'], step_num = best_args["step_num"], DNNLayerNum = best_args['DNNLayerNum'], lr = best_args['lr'])
-                    args_dnn = info._set_arg_dict(args_dnn)
-                    args_dnn['dim']        = int(args_mpn_c['dim']+2*args_mpn_s['dim'])
-                    args_dnn['step_size']  = int(args_dnn['train_num']/args_dnn['step_num'])
-                    args_dnn['grad_node']  = int(args_dnn['dim'] / args_dnn['DNNLayerNum'])
-                    args_dnn['node_list']  = [int(args_dnn['dim'] - args_dnn['grad_node']*num) for num in range(args_dnn['DNNLayerNum'])] + [1]
-                                    
-                    w_pos     = int(np.where(trY==0)[0].shape[0] / np.where(trY==1)[0].shape[0])
-                    loss_fn   = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([w_pos]))
-                    mpn_c, mpn_s1, mpn_s2, dnn  = fit_bestparams(info, args_dnn, args_mpn_c, args_mpn_s, trX, trY, loss_fn)
-                    score_tr     , predY_tr     , proba_tr      = predict_bestparams(info, mpn_c, mpn_s1, mpn_s2, dnn, args_dnn, trX, trY, loss_fn)
-                    score_cpdout , predY_cpdout , proba_cpdout  = predict_bestparams(info, mpn_c, mpn_s1, mpn_s2, dnn, args_dnn, cpdoutX, cpdoutY, loss_fn)
-                    score_bothout, predY_bothout, proba_bothout = predict_bestparams(info, mpn_c, mpn_s1, mpn_s2, dnn, args_dnn, bothoutX, bothoutY, loss_fn)
-                    print("    $ Prediction Done.\n")
-                    
-                    # Write & save log
-                    log_tr = p.WriteLog_tr(loop, tr, trY, predY_tr, proba_tr) 
-                    log_cpdout = p.WriteLog_ts(loop, tr, cpdout, cpdoutY, predY_cpdout, proba_cpdout)
-                    log_bothout = p.WriteLog_ts(loop, tr, bothout, bothoutY, predY_bothout, proba_bothout)  
-                    p.Save(target, loop, log_tr, log_cpdout, log_bothout, args_mpn_c, args_mpn_s, args_dnn, mpn_c, mpn_s1, mpn_s2, dnn)
-                    print("    $  Log is out.\n")
-                    
+    p.run('CHEMBL204', debug=True)
+                        
 if __name__ == '__main__':    
     
     #bd = '/home/bit/tamuras0/ACPredCompare'
-    bd = '/home/tamuras0/work/ACPredCompare'
-    tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
-    #tlist = tlist.loc[tlist['machine2'],:]
+    bd = '/home/tamura/work/ACPredCompare'
     
-    debug = False
-    
-    # main('CHEMBL4072', bd, debug)
-    
-    # for i, sr in tlist.iterrows():
-    #     target = sr['chembl_tid']   
-    
-    #     print("\n----- %s is proceeding -----\n" %target)
-    #     main(target, bd, debug)
-    
-    obj = partial(main, bd=bd, debug=debug)
-    joblib.Parallel(n_jobs=10, backend='loky')(joblib.delayed(obj)(target) for target in tlist['chembl_tid'])
+    debug(bd)
