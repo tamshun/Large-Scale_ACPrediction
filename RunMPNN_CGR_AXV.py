@@ -109,7 +109,7 @@ class Classification(Base_wodirection_CGR):
     
     def _AllMMSPred(self, target):
         if self._IsPredictableTarget():
-            info = ACPredictionModel(target=target, debug=debug)
+            info = ACPredictionModel(target=target, debug=self.debug)
             for loop in self.testsetidx:    
                 
                 if self.debug:
