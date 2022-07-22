@@ -294,9 +294,9 @@ class Classification(Base_wodirection):
                     print("    $ Prediction Done.\n")
 
                     # Write & save log
-                    log_tr = p.WriteLog_tr(trial, tr, trY, predY_tr, proba_tr) 
-                    log_ts = p.WriteLog_ts(trial, tr, ts, tsY, predY_ts, proba_ts)  
-                    p.Save(target, trial, log_tr, log_ts, best_args, ml)
+                    log_tr = self.WriteLog_tr(trial, tr, trY, predY_tr, proba_tr) 
+                    log_ts = self.WriteLog_ts(trial, tr, ts, tsY, predY_ts, proba_ts)  
+                    self.Save(target, trial, log_tr, log_ts, best_args, ml)
                     print("    $  Log is out.\n")      
             
             

@@ -140,8 +140,8 @@ def objective(trial, trX, trY, nfold, nepoch):
     args = dict(
                 train_num    = nepoch,
                 batch_size   = 128,
-                cuda         = False,#torch.cuda.is_available(),
-                device       = 'cpu',#'cuda' if torch.cuda.is_available() else 'cpu'
+                cuda         = torch.cuda.is_available(),
+                device       = 'cuda' if torch.cuda.is_available() else 'cpu',
                 gamma        = 0.1,
                 nbits        = trX.shape[1]
                 )
@@ -193,7 +193,7 @@ class Classification(Base_wodirection):
 
     def __init__(self, modeltype, model, dir_log, dir_score):
 
-        super().__init__(modeltype, dir_log=dir_log, dir_score=dir_score, data_split_metric='trtssplit')
+        super().__init__(modeltype, dir_log=dir_log, dir_score=dir_score, data_split_metric='axv')
         self.model_name = model
         self.pred_type  = "classification"
         self.nfold      = 3
@@ -250,9 +250,15 @@ class Classification(Base_wodirection):
     
     def _AllMMSPred(self, target):
         
+        self.nepoch = self._Setnepoch()
+        
         if self._IsPredictableTarget():
             
             for trial in self.testsetidx:    
+                
+                if os.path.isfile(self.modeldir+"/params_%s_Seed%d.json" %(target, trial)):
+                    print('    $ %s Seed%d already exists.' %(target, trial))
+                    continue
                 
                 # Initialize
                 log_tr      = defaultdict(list)
@@ -278,14 +284,13 @@ class Classification(Base_wodirection):
                     objective_partial = partial(objective, trX=trX, trY=trY, nfold=self.nfold, nepoch=self.nepoch[0])
                     study.optimize(objective_partial, n_trials=self.nepoch[2]) #NOTE!!!!
                     
-                    best_args = dict(
-                                train_num    = self.nepoch[0],
-                                batch_size   = 128,
-                                cuda         = False,#torch.cuda.is_available(),
-                                device       = 'cuda' if torch.cuda.is_available() else 'cpu'
-                                gamma        = 0.1,
-                                nbits        = trX.shape[1]
-                                )
+                    best_args = dict(train_num    = self.nepoch[0],
+                                     batch_size   = 128,
+                                     cuda         = torch.cuda.is_available(),
+                                     device       = 'cuda' if torch.cuda.is_available() else 'cpu',
+                                     gamma        = 0.1,
+                                     nbits        = trX.shape[1]
+                                    )
                     best_args.update(study.best_params)
                     best_args['step_size']  = int(best_args['train_num']/best_args['step_num'])
                     best_args['grad_node']  = int(best_args['nbits']/ best_args['DNNLayerNum'])
@@ -300,9 +305,9 @@ class Classification(Base_wodirection):
                     print("    $ Prediction Done.\n")
 
                     # Write & save log
-                    log_tr      = p.WriteLog_tr(trial, tr, trY, predY_tr, proba_tr) 
-                    log_cpdout  = p.WriteLog_ts(trial, tr, cpdout, cpdoutY, predY_cpdout, proba_cpdout)
-                    log_bothout = p.WriteLog_ts(trial, tr, bothout, bothoutY, predY_bothout, proba_bothout)  
+                    log_tr      = self.WriteLog_tr(trial, tr, trY, predY_tr, proba_tr) 
+                    log_cpdout  = self.WriteLog_ts(trial, tr, cpdout, cpdoutY, predY_cpdout, proba_cpdout)
+                    log_bothout = self.WriteLog_ts(trial, tr, bothout, bothoutY, predY_bothout, proba_bothout)  
                     self.Save(target, trial, log_tr, log_cpdout, log_bothout,best_args, ml)
                     print("    $  Log is out.\n")      
             
@@ -365,7 +370,7 @@ def main(bd):
     mtype = "axv"
     
     tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
-    tlist = tlist.loc[tlist['machine1'],:]
+    #tlist = tlist.loc[tlist['machine1'],:]
     
     os.chdir(bd)
     os.makedirs("./Log_%s"%mtype, exist_ok=True)
@@ -377,7 +382,7 @@ def main(bd):
                        dir_score  = './Score_%s/%s' %(mtype, model),
                        )
                     
-    p.run_parallel(tlist['chembl_tid'], njob=-1)
+    p.run_parallel(tlist['chembl_tid'], njob=4)
     
 
 def debug(bd):
@@ -405,9 +410,10 @@ def debug(bd):
             
 if __name__ == '__main__':    
     
-    bd = '/home/bit/tamuras0/ACPredCompare'#'/home/tamuras0/work/ACPredCompare'
+    #bd = '/home/bit/tamuras0/ACPredCompare'
+    bd = '/home/tamuras0/work/ACPredCompare'
     
-    debug(bd)
+    main(bd)
         
         
 

@@ -164,7 +164,6 @@ if __name__ == '__main__':
     #model = "Random_Forest"
     mtype = "axv"
     
-    #debug(bd, model='1NN', mtype=mtype)
     main(bd, model='1NN', mtype=mtype)
     main(bd, model='5NN', mtype=mtype)
  
