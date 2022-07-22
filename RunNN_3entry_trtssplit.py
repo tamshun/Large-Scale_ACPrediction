@@ -419,7 +419,7 @@ def main(bd):
     
     #Initialize   
     model = "FCNN"
-    mtype = "wodirection_trtsslpit"
+    mtype = "separated_trtssplit"
     
     tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
     #tlist = tlist.loc[tlist['machine1'],:]
