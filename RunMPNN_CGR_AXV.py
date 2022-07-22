@@ -124,7 +124,7 @@ class Classification(Base_wodirection_CGR):
                 bothoutX, bothoutY = bothout[self.col], bothout['class'].to_numpy()
                 
                 
-                flag_predictable = self._IsPredictableSeries(tr, cpdout, min_npos=self.nfold) * self._IsPredictableSeries(tr, bothout, min_npos=p.nfold)
+                flag_predictable = self._IsPredictableSeries(tr, cpdout, min_npos=self.nfold) * self._IsPredictableSeries(tr, bothout, min_npos=self.nfold)
                 if flag_predictable:    
                     # Fit and Predict
                     pruner = optuna.pruners.MedianPruner()
@@ -469,7 +469,7 @@ def main(bd):
     mtype = "axv"
     
     tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
-    tlist = tlist.loc[tlist['machine1'],:]
+    tlist = tlist.loc[tlist['machine2'],:]
     
     os.chdir(bd)
     os.makedirs("./Log_%s"%mtype, exist_ok=True)
@@ -481,7 +481,7 @@ def main(bd):
                        dir_score  = './Score_%s/%s' %(mtype, model),
                        )
                     
-    p.run_parallel(tlist['chembl_tid'], njob=-1)
+    p.run_parallel(tlist['chembl_tid'], njob=6)
     
 
 def debug(bd):
@@ -509,6 +509,7 @@ def debug(bd):
             
 if __name__ == '__main__':    
     
-    bd = '/home/bit/tamuras0/ACPredCompare'#'/home/tamuras0/work/ACPredCompare'
+    #bd = '/home/bit/tamuras0/ACPredCompare'
+    bd = '/home/tamura/work/ACPredCompare'
     
-    debug(bd)
+    main(bd)
