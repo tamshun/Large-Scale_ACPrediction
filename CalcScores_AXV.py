@@ -45,14 +45,14 @@ class MakeScoreTable(CalcBasicScore):
         score_all = pd.concat([score_all, trials], ignore_index=True) 
         return  score_mean, score_all
     
-    def _Save(self, score_mean, score_all):
+    def _Save(self, score_mean, score_all, metric):
         score_mean = pd.DataFrame.from_dict(score_mean).T
         score_all  = pd.DataFrame.from_dict(score_all).T    
         
         score_mean = score_mean.applymap(lambda x: np.round(x,3))  
           
-        score_mean.to_csv(self.dir_score + '/mean_cpdout.tsv', sep='\t')
-        score_all.to_csv(self.dir_score + '/alltrial_cpdout.tsv', sep='\t')  
+        score_mean.to_csv(self.dir_score + '/mean_%s.tsv' %metric, sep='\t')
+        score_all.to_csv(self.dir_score + '/alltrial_%s.tsv' %metric , sep='\t')  
           
     def GetScores_TakeAverage(self):
         
@@ -66,8 +66,8 @@ class MakeScoreTable(CalcBasicScore):
             score_mean_cpdout, score_all_cpdout = self._StoreStats(trials_cpdout, target, score_mean_cpdout, score_all_cpdout)
             score_mean_bothout, score_all_bothout = self._StoreStats(trials_bothout, target, score_mean_bothout, score_all_bothout)
         
-        self._Save(score_mean_cpdout, score_all_cpdout)
-        self._Save(score_mean_bothout, score_all_bothout)
+        self._Save(score_mean_cpdout, score_all_cpdout, 'cpdout')
+        self._Save(score_mean_bothout, score_all_bothout, 'bothout')
         
         print('$ score calculation done')        
         
@@ -76,7 +76,7 @@ class MakeScoreTable(CalcBasicScore):
         d_cpdout = dict()
         d_bothout = dict()
         
-        Seeds = [int(seed.split('-Seed')[1]) for seed in self.tlist if seed.split('-Seed')[0] == target]
+        Seeds = [int(seed.split('-Seed')[1]) for seed in self.tlist.index if seed.split('-Seed')[0] == target]
         
         for i in Seeds:
             
@@ -84,11 +84,11 @@ class MakeScoreTable(CalcBasicScore):
                 path_log_cpdout  = os.path.join(self.dir_log, "%s_Seed%d_cpdout.tsv" %(target, i))
                 path_log_bothout = os.path.join(self.dir_log, "%s_Seed%d_bothout.tsv" %(target, i))
             elif 'NN' in self.model:
-                path_log_cpdout  = os.path.join(self.dir_log, "%s_cpdout%d_trial.tsv" %(target, i))
-                path_log_bothout = os.path.join(self.dir_log, "%s_bothout%d_trial.tsv" %(target, i))
+                path_log_cpdout  = os.path.join(self.dir_log, "%s_cpdout_trial%d.tsv" %(target, i))
+                path_log_bothout = os.path.join(self.dir_log, "%s_bothout_trial%d.tsv" %(target, i))
             else:
-                path_log_cpdout = os.path.join(self.dir_log, "%s_cpdout%d_trial.tsv" %(target, i))
-                path_log_bothout = os.path.join(self.dir_log, "%s_bothout%d_trial.tsv" %(target, i))
+                path_log_cpdout = os.path.join(self.dir_log, "%s_cpdout_trial%d.tsv" %(target, i))
+                path_log_bothout = os.path.join(self.dir_log, "%s_bothout_trial%d.tsv" %(target, i))
                 
             log_cpdout     = pd.read_csv(path_log_cpdout, sep="\t", index_col=0)
             score_cpdout    = self.CalcScores(log_cpdout['trueY'], log_cpdout['predY'], log_cpdout['prob'])
@@ -133,26 +133,25 @@ if __name__ == '__main__':
     else:
         bd    = "/home/tamuras0/work/ACPredCompare/"
     
-    ml = 'FCNN_separated'
-    # corr_ml = 'Random_Forest'
-    # model = ml + '/' + corr_ml
-    model = ml
-    mtype = "wodirection_trtssplit"
-    os.chdir(bd)
-    os.makedirs("./Log_%s"%mtype, exist_ok=True)
-    os.makedirs("./Score_%s"%mtype, exist_ok=True)
-    
     tlist = pd.read_csv('./Dataset/Stats/axv.tsv', sep='\t', index_col=0)
     
-        
-    p = MakeScoreTable( targets     = tlist,
-                        modeltype   = mtype,
-                        model       = model,
-                        dir_log    = './Log_%s/%s' %(mtype, model),
-                        dir_score  = './Score_%s/%s' %(mtype, model)
-                        )
+    for ml in ['FCNN', 'FCNN_separated', 'SVM', 'Random_Forest', 'XGBoost', '1NN', '5NN']:
+        # corr_ml = 'Random_Forest'
+        # model = ml + '/' + corr_ml
+        model = ml
+        mtype = "axv"
+        os.chdir(bd)
+        os.makedirs("./Log_%s"%mtype, exist_ok=True)
+        os.makedirs("./Score_%s"%mtype, exist_ok=True)        
+            
+        p = MakeScoreTable( tlist     = tlist,
+                            modeltype   = mtype,
+                            model       = model,
+                            dir_log    = './Log_%s/%s' %(mtype, model),
+                            dir_score  = './Score_%s/%s' %(mtype, model)
+                            )
 
-    p.GetScores_TakeAverage()
-    # p.RenderToFig()
-    
-    # Barplot()
+        p.GetScores_TakeAverage()
+        # p.RenderToFig()
+        
+        # Barplot()
