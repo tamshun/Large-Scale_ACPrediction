@@ -219,7 +219,7 @@ class ACPredictionModel():
     def _Setnepoch(self):
         
         if self.debug:
-            nepoch = [10, 10, 2]
+            nepoch = [3, 3, 2]
         else:
             nepoch = [50, 100, 100]
             
@@ -469,7 +469,6 @@ def main(bd):
     mtype = "axv"
     
     tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
-    tlist = tlist.loc[tlist['machine2'],:]
     
     os.chdir(bd)
     os.makedirs("./Log_%s"%mtype, exist_ok=True)
@@ -504,12 +503,12 @@ def debug(bd):
                        dir_score  = './Score_%s/%s' %(mtype, model),
                        )
                     
-    p.run('CHEMBL204')
+    p.run('CHEMBL335', debug=True)
                     
             
 if __name__ == '__main__':    
     
-    #bd = '/home/bit/tamuras0/ACPredCompare'
-    bd = '/home/tamura/work/ACPredCompare'
+    bd = '/home/tamuras0/work/ACPredCompare'
+    #bd = '/home/tamura/work/ACPredCompare'
     
     main(bd)
