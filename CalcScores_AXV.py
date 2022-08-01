@@ -135,7 +135,7 @@ if __name__ == '__main__':
     
     tlist = pd.read_csv('./Dataset/Stats/axv.tsv', sep='\t', index_col=0)
     
-    for ml in ['FCNN', 'FCNN_separated', 'SVM', 'Random_Forest', 'XGBoost', '1NN', '5NN']:
+    for ml in ['MPNN', 'MPNN_separated']:
         # corr_ml = 'Random_Forest'
         # model = ml + '/' + corr_ml
         model = ml
