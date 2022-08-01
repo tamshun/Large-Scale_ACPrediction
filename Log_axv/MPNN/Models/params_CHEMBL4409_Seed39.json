@@ -1,0 +1,1 @@
+{"train_num": 50, "batch_size": 128, "agg_depth": 1, "cuda": true, "gamma": 0.1, "ConvNum": 4, "dropout": 0.25, "dim": 80.0, "step_num": 3, "DNNLayerNum": 3, "lr": 0.00354140131927006, "step_size": 16, "grad_node": 26, "node_list": [80, 54, 28, 1]}
