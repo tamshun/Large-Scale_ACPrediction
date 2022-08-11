@@ -8,6 +8,7 @@ Created on Thu Jun 11 14:09:59 2020
 #%%
 import pandas as pd
 import numpy as np
+import random
 from MMP.make_input                    import LeaveOneCoreOut, GetDiverseCore, DelTestCpdFromTrain
 from Tools.ReadWrite                   import ToJson
 from Fingerprint.Hash2BitManager       import Hash2Bits, FindBitLength
@@ -54,7 +55,7 @@ class Base_wodirection(Initialize):
         self.ecfp = pd.read_csv("./Dataset/ECFP/%s.tsv" %target, sep="\t", index_col=0)
 
 
-    def _GetMatrices(self, cid, separated_input=False):
+    def _GetMatrices(self, cid, separated_input=False, unbiased=False):
         '''
         Wrapper function of TrainTestSplit_main, TrainTestSplit_ecfp, Hash2Bits 
         '''
@@ -62,6 +63,9 @@ class Base_wodirection(Initialize):
         if self.trtssplit == 'trtssplit':
             tr, ts = self._TrainTestSplit_main(cid)
             
+            if unbiased:
+                tr = self._MakeTrainUnbiased(tr, seed=cid)
+                
             df_trX, df_tsX = self._TrainTestSplit_ecfp(tr, ts)
             
             if not separated_input:
@@ -75,6 +79,9 @@ class Base_wodirection(Initialize):
         elif self.trtssplit == 'axv':
             tr, cpdout, bothout = self._TrainTestSplit_main_axv(cid)
             
+            if unbiased:
+                tr = self._MakeTrainUnbiased(tr, seed=cid)
+                
             df_trX, df_cpdoutX, df_bothoutX = self._TrainTestSplit_ecfp_axv(tr, cpdout, bothout)
             
             if not separated_input:
@@ -102,7 +109,21 @@ class Base_wodirection(Initialize):
         
         return df_trX, df_tsX
     
-    
+    def _MakeTrainUnbiased(self, tr, seed):
+        
+        ac    = tr[tr['class']==1]
+        nonac = tr[tr['class']!=1]
+        nac   = ac.shape[0]
+        
+        # random sample so that #non-ac equals to #ac 
+        random.seed(seed)
+        idx   = random.sample(range(nonac.shape[0]), nac)
+        nonac = nonac.iloc[idx]
+        
+        tr = pd.concat([ac, nonac])
+        
+        return tr
+
     def _Hash2Bits(self, tr, ts, df_trX, df_tsX):
         
         df_trY = tr["class"]

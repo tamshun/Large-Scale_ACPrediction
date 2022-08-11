@@ -355,16 +355,26 @@ class Base_wodirection_CGR(Initialize):
         self.main = pd.read_csv("./Dataset/CGR/%s.tsv" %target, sep="\t", index_col=0)
 
 
-    def _GetTrainTest(self, cid):
+    def _GetTrainTest(self, cid, unbiased=False):
         '''
         Wrapper function of TrainTestSplit_main, TrainTestSplit_ecfp, Hash2Bits 
         '''
         if self.trtssplit == 'axv':
+            
             tr, cpdout, bothout = self._TrainTestSplit_axv(cid)
+            
+            if unbiased:
+                tr = self._MakeTrainUnbiased(tr, seed=cid)
+            
             return tr, cpdout, bothout
         
         elif self.trtssplit == 'trtssplit':
+            
             tr, ts = self._TrainTestSplit(cid)
+            
+            if unbiased:
+                tr = self._MakeTrainUnbiased(tr, seed=cid)
+                
             return tr, ts
         
     
@@ -386,7 +396,20 @@ class Base_wodirection_CGR(Initialize):
             
         return tr, cpdout, bothout
     
-    
+    def _MakeTrainUnbiased(self, tr, seed):
+        
+        ac    = tr[tr['class']==1]
+        nonac = tr[tr['class']!=1]
+        nac   = ac.shape[0]
+        
+        # random sample so that #non-ac equals to #ac 
+        random.seed(seed)
+        idx   = random.sample(range(nonac.shape[0]), nac)
+        nonac = nonac.iloc[idx]
+        
+        tr = pd.concat([ac, nonac])
+        
+        return tr
     
         
         

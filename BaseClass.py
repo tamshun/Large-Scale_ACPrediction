@@ -84,7 +84,6 @@ def MultipleTrainTestSplit(df, n_dataset=3):
     
     return trtssplit
 
-
 AXVIdx = namedtuple('AXVIndex', ('tridx', 'compound_out', 'both_out'))
 def MultipleAXVSplit(df, seeds):
     
