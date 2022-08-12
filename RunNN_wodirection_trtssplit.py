@@ -18,7 +18,7 @@ from collections                       import OrderedDict, defaultdict
 from collections                       import defaultdict, OrderedDict
 from sklearn.model_selection           import StratifiedKFold
 from sklearn.metrics                   import roc_auc_score, accuracy_score
-from BaseFunctions_NN                  import Base_wodirection
+from BaseFunctions                     import Base_wodirection
 
 def torch2numpy(x):
     return x.to("cpu").detach().numpy().copy()
@@ -41,30 +41,6 @@ class Dataset(torch.utils.data.Dataset):
         tensor_X = torch.FloatTensor(self.X[idx,:])
         tensor_y = torch.FloatTensor(self.y[idx])
         return tensor_X, tensor_y    
-# class FullyConnectedNN(nn.Module):
-    
-#     def __init__(self, nbits, hidden_nodes, drop_rate):
-#         super(FullyConnectedNN, self).__init__()
-        
-#         self.nbits = nbits
-#         self.nlayer = len(hidden_nodes)
-#         self.linear_relu_stack = nn.Sequential(OrderedDict([
-#                                                 ('in-l1', nn.Linear(self.nbits, hidden_nodes[0])),
-#                                                 ('relu' , nn.ReLU()),                                                
-#                                                 ]))
-        
-#         for i in range(1,self.nlayer):
-#             self.linear_relu_stack.add_module('l%d-l%d'%(i, i+1) , nn.Linear(hidden_nodes[i-1], hidden_nodes[i]))
-#             self.linear_relu_stack.add_module('relu%d'%(i), nn.ReLU())
-#             self.linear_relu_stack.add_module('dropout%d'%(i), nn.Dropout(drop_rate))
-                
-#         self.linear_relu_stack.add_module('l%d-out'%self.nlayer, nn.Linear(hidden_nodes[i], 1))
-#         # self.linear_relu_stack.add_module('l%d-out'%self.nlayer, nn.Linear(hidden_nodes[i], 2))
-#         #self.linear_relu_stack.add_module('softmax', nn.Softmax(dim=1))
-        
-#     def forward(self, x):
-#         signal = self.linear_relu_stack(x)
-#         return signal    
     
  
 class FullyConnectedNN(nn.Module):
@@ -222,6 +198,16 @@ class Classification(Base_wodirection):
         self.pred_type  = "classification"
         self.nfold      = 3
         
+        
+    def _Setnepoch(self):
+        
+        if self.debug:
+            nepoch = [2, 2, 2]
+        else:
+            nepoch = [50, 100, 100]
+            
+        return nepoch
+    
     
     def _fit_bestparams(self, params, trX, trY, loss_fn):
         
@@ -308,9 +294,9 @@ class Classification(Base_wodirection):
                     print("    $ Prediction Done.\n")
 
                     # Write & save log
-                    log_tr = p.WriteLog_tr(trial, tr, trY, predY_tr, proba_tr) 
-                    log_ts = p.WriteLog_ts(trial, tr, ts, tsY, predY_ts, proba_ts)  
-                    p.Save(target, trial, log_tr, log_ts, best_args, ml)
+                    log_tr = self.WriteLog_tr(trial, tr, trY, predY_tr, proba_tr) 
+                    log_ts = self.WriteLog_ts(trial, tr, ts, tsY, predY_ts, proba_ts)  
+                    self.Save(target, trial, log_tr, log_ts, best_args, ml)
                     print("    $  Log is out.\n")      
             
             
