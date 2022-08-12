@@ -517,8 +517,8 @@ def debug(bd):
                         
 if __name__ == '__main__':    
     
-    bd = '/home/bit/tamuras0/ACPredCompare'
-    # bd = '/home/tamura/work/ACPredCompare'
+    #bd = '/home/bit/tamuras0/ACPredCompare'
+    bd = '/home/tamura/work/ACPredCompare'
     
-    debug(bd)
-    # main(bd)
+    #debug(bd)
+    main(bd)
