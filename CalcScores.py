@@ -107,20 +107,22 @@ if __name__ == '__main__':
     else:
         bd    = "/home/tamuras0/work/ACPredCompare/"
     
-    ml = 'FCNN_separated'
+    ml = 'MPNN_separated'
     # corr_ml = 'Random_Forest'
     # model = ml + '/' + corr_ml
     model = ml
-    mtype = "wodirection_trtssplit"
+    mtype = "unbiased_trtssplit"
     os.chdir(bd)
     os.makedirs("./Log_%s"%mtype, exist_ok=True)
     os.makedirs("./Score_%s"%mtype, exist_ok=True)
     
-    tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
-    tlist = tlist.loc[tlist['predictable_trtssplit'], :]
+    # tlist = pd.read_csv('./Dataset/target_list.tsv', sep='\t', index_col=0)
+    # tlist = tlist.loc[tlist['predictable_trtssplit'], :]
     
+    # top10 targets having lots of AC
+    tlist = ['CHEMBL244', 'CHEMBL204', 'CHEMBL205', 'CHEMBL3594', 'CHEMBL261', 'CHEMBL264', 'CHEMBL3242', 'CHEMBL253', 'CHEMBL217', 'CHEMBL3837']
         
-    p = MakeScoreTable( targets     = tlist['chembl_tid'],
+    p = MakeScoreTable( targets     = tlist, #tlist['chembl_tid'],
                         modeltype   = mtype,
                         model       = model,
                         dir_log    = './Log_%s/%s' %(mtype, model),

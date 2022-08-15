@@ -24,11 +24,16 @@ from collections                       import defaultdict
 
 class MakeScoreTable(CalcBasicScore):
     
-    def __init__(self, tlist, model, modeltype, dir_log, dir_score):
+    def __init__(self, tlist, targets, model, modeltype, dir_log, dir_score):
         
         super().__init__()
         self.tlist   = tlist
-        self.targets = np.unique([s.split('-')[0] for s in self.tlist.index])
+        
+        if targets!=None:
+            self.targets = targets
+        else:
+            self.targets = np.unique([s.split('-')[0] for s in self.tlist.index])
+            
         self.model     = model
         self.mtype     = modeltype
         self.dir_log   = dir_log
@@ -134,21 +139,24 @@ if __name__ == '__main__':
         bd    = "/home/tamuras0/work/ACPredCompare/"
     
     tlist = pd.read_csv('./Dataset/Stats/axv.tsv', sep='\t', index_col=0)
+    # top10 targets having lots of AC
+    targets = ['CHEMBL244', 'CHEMBL204', 'CHEMBL205', 'CHEMBL3594', 'CHEMBL261', 'CHEMBL264', 'CHEMBL3242', 'CHEMBL253', 'CHEMBL217', 'CHEMBL3837']
     
-    for ml in ['MPNN', 'MPNN_separated']:
+    for ml in ['SVM', 'MPNN_separated']:
         # corr_ml = 'Random_Forest'
         # model = ml + '/' + corr_ml
         model = ml
-        mtype = "axv"
+        mtype = "unbiased_axv"
         os.chdir(bd)
         os.makedirs("./Log_%s"%mtype, exist_ok=True)
         os.makedirs("./Score_%s"%mtype, exist_ok=True)        
             
-        p = MakeScoreTable( tlist     = tlist,
-                            modeltype   = mtype,
-                            model       = model,
+        p = MakeScoreTable( tlist      = tlist,
+                           targets     = targets,
+                            modeltype  = mtype,
+                            model      = model,
                             dir_log    = './Log_%s/%s' %(mtype, model),
-                            dir_score  = './Score_%s/%s' %(mtype, model)
+                            dir_score  = './Score_%s/%s' %(mtype, model),
                             )
 
         p.GetScores_TakeAverage()
