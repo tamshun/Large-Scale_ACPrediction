@@ -140,19 +140,19 @@ if __name__ == '__main__':
     
     tlist = pd.read_csv('./Dataset/Stats/axv.tsv', sep='\t', index_col=0)
     # top10 targets having lots of AC
-    targets = ['CHEMBL244', 'CHEMBL204', 'CHEMBL205', 'CHEMBL3594', 'CHEMBL261', 'CHEMBL264', 'CHEMBL3242', 'CHEMBL253', 'CHEMBL217', 'CHEMBL3837']
+    # targets = ['CHEMBL244', 'CHEMBL204', 'CHEMBL205', 'CHEMBL3594', 'CHEMBL261', 'CHEMBL264', 'CHEMBL3242', 'CHEMBL253', 'CHEMBL217', 'CHEMBL3837']
     
-    for ml in ['SVM', 'MPNN_separated']:
+    for ml in ['FCNN', 'SVM', 'Random_Forest', 'XGBoost', 'FCNN_separated', 'MPNN', 'MPNN_separated', '1NN', '5NN']:
         # corr_ml = 'Random_Forest'
         # model = ml + '/' + corr_ml
         model = ml
-        mtype = "unbiased_axv"
+        mtype = "axv"
         os.chdir(bd)
         os.makedirs("./Log_%s"%mtype, exist_ok=True)
         os.makedirs("./Score_%s"%mtype, exist_ok=True)        
             
         p = MakeScoreTable( tlist      = tlist,
-                           targets     = targets,
+                           targets     = None,
                             modeltype  = mtype,
                             model      = model,
                             dir_log    = './Log_%s/%s' %(mtype, model),
