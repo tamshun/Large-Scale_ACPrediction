@@ -14,7 +14,9 @@ for split in splits:
     for ml in mls:
         print(ml)
         logdir = './Log_%s/%s/' %(split, ml)
-        scoredir = './Score_%s/%s/' %(split, ml)
+        scoredir = './Score_%s/RepMol/' %(split)
+        
+        os.makedirs(scoredir, exist_ok=True)
 
         files = [f for f in os.listdir(logdir) if os.path.isfile(logdir+f)]
         if split == 'axv':
@@ -79,8 +81,9 @@ for split in splits:
         mol_sub1 = Chem.MolFromSmiles(smi_sub1)
         mol_sub2 = Chem.MolFromSmiles(smi_sub2)
 
-        img = Draw.MolsToGridImage([mol_core, mol_sub1, mol_sub2], subImgSize=(400,200))
-        img.save(scoredir+'AC_%s_%s.png'%(file_ac.split('_')[0], mmp_ac))
+        Draw.MolToFile(mol_core, scoredir+'%s_AC_core_%s_%s.svg'%(ml, file_ac.split('_')[0], mmp_ac), imageType='svg')
+        Draw.MolToFile(mol_sub1, scoredir+'%s_AC_sub1_%s_%s.svg'%(ml, file_ac.split('_')[0], mmp_ac), imageType='svg')
+        Draw.MolToFile(mol_sub2, scoredir+'%s_AC_sub2_%s_%s.svg'%(ml, file_ac.split('_')[0], mmp_ac), imageType='svg')
         
         data = pd.read_csv('./Dataset/Data/%s.tsv' %(file_nonac.split('_')[0]), sep='\t', index_col='id')
         smi_core = data.loc[mmp_nonac, 'core'].replace('R1', '*')
@@ -91,5 +94,6 @@ for split in splits:
         mol_sub1 = Chem.MolFromSmiles(smi_sub1)
         mol_sub2 = Chem.MolFromSmiles(smi_sub2)
 
-        img = Draw.MolsToGridImage([mol_core, mol_sub1, mol_sub2], subImgSize=(400,200))
-        img.save(scoredir+'NonAC_%s_%s.png'%(file_nonac.split('_')[0], mmp_nonac))
+        Draw.MolToFile(mol_core, scoredir+'%s_NonAC_core_%s_%s.svg'%(ml, file_nonac.split('_')[0], mmp_nonac), imageType='svg')
+        Draw.MolToFile(mol_sub1, scoredir+'%s_NonAC_sub1_%s_%s.svg'%(ml, file_nonac.split('_')[0], mmp_nonac), imageType='svg')
+        Draw.MolToFile(mol_sub2, scoredir+'%s_NonAC_sub2_%s_%s.svg'%(ml, file_nonac.split('_')[0], mmp_nonac), imageType='svg')
