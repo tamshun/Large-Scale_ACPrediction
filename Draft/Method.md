@@ -72,10 +72,48 @@ Table: __Table X Initial invariants on atoms and bonds__
 --------------------------------------------------------------------------------------
 Method Hyperparameter Range(interval)
 --------------------------------------------------------------------------------------
- SVM
- RF
- XGB
- FCNN
- MPNN
+ SVM C=np.logspace(-2, 2, num=10, endpoint=True, base=10)
+
+ RF 'n_estimators'         : trial.suggest_int('n_estimators', 50, 1000),
+'max_depth'           : trial.suggest_int('max_depth', 4, 50),
+'min_samples_split' : trial.suggest_float("min_samples_split", 1e-8, 1.0, log=True),
+'class_weight'          : 'balanced'
+
+ XGB "use_label_encoder"     : False,
+"objective"                    : "binary:logistic",
+"tree_method"              : "exact",
+"booster"                      : "gbtree",
+"reg_lambda"                : trial.suggest_float("reg_lambda", 1e-8, 1.0, log=True),
+"reg_alpha"                   : trial.suggest_float("reg_alpha", 1e-8, 1.0, log=True),
+"subsample"                  : trial.suggest_float("subsample", 0.2, 1.0),
+"colsample_bytree"        : trial.suggest_float("colsample_bytree", 0.2, 1.0),
+"max_depth"                 : trial.suggest_int("max_depth", 3, 9, step=2),
+"min_child_weight"        : trial.suggest_int("min_child_weight", 2, 10),
+"eta"                             : trial.suggest_float("eta", 1e-8, 1.0, log=True),
+"gamma"                      : trial.suggest_float("gamma", 1e-8, 1.0, log=True),
+'scale_pos_weight'         :  n_neg / n_pos (balanced)
+"eval_metric"                 : aucroc,
+'early_stopping_rounds' : 15 
+ FCNN N_layer           = trial.suggest_int('n_layer', 2, 3)
+hidden_nodes = trial.suggest_discrete_uniform("num_filter_i", 250, 2000, 250)
+drop_rate        = trial.suggest_discrete_uniform('drop_rate', 0.25, 0.50, 0.25)
+adam_lr          i= trial.suggest_loguniform('adam_lr', 1e-4, 1e-2)
+batch_size       = trial.suggest_categorical('batch_size', [64, 128, 256])
+
+ MPNN train_num         = 50
+batch_size         = 128
+lr                       = 0.0001
+agg_depth        = 1
+gamma             = 0.1
+step_size           = int(args['train_num']/args['step_num'])
+grad_node        = int(args['dim'] / args['DNNLayerNum'])
+node_list           = [int(args['dim'] - args['grad_node']*num) for num in range(args['DNNLayerNum'])] + [1]
+ConvNum         = trial.suggest_int('ConvNum', 2, 4) #depth
+dropout            = trial.suggest_discrete_uniform('dropout', 0.1, 0.3, 0.05)
+dim                   = int(trial.suggest_discrete_uniform("dim", 70, 100, 10))
+step_num          = trial.suggest_int("step_num", 1, 3)
+DNNLayerNum = trial.suggest_int('DNNLayerNum', 2, 8)
+batch_prop       = trial.suggest_loguniform('batch_prop', 1e-3, 0.3) 
+
 --------------------------------------------------------------------------------------
 Table: __Table X__ Hyperparameters of models
