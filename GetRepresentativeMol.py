@@ -141,9 +141,10 @@ for split in splits:
             else:    
                 log = pd.read_csv(logdir + file.split('.')[0] + '_test.tsv', sep='\t', index_col=0)
             
-            
-        mmp_ac = log['ids'].iloc[np.argmax(log[col])]
-        mmp_nonac = log['ids'].iloc[np.argmin(log[col])]
+        log_ac = log[log['trueY']==1]   
+        mmp_ac = log_ac['ids'].iloc[np.argmax(log_ac[col])]
+        log_nonac =  log[log['trueY']!=1]   
+        mmp_nonac = log_nonac['ids'].iloc[np.argmin(log_nonac[col])]
         
         data = pd.read_csv('./Dataset/Data/%s.tsv' %(target), sep='\t', index_col='id')
         smi_core = data.loc[mmp_ac, 'core'].replace('R1', '*')
