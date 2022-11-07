@@ -5,23 +5,42 @@ Created on Thu Jun 11 14:09:59 2020
 @author: Tamura
 """
 
-from operator import neg
 import pandas as pd
 import numpy as np
-import sys
 import os
 import platform
-import matplotlib.pyplot as plt
-#import shap
-from tqdm                              import tqdm
-from Metrix.scores                     import RenderDF2Fig, CalcBasicScore
-from Evaluation.Labelling              import AddLabel
-from Evaluation.Score                  import ScoreTable_wDefinedLabel
-from Plots.Barplot                     import MakeBarPlotsSeaborn as bar
-from Plots.Lineplot                    import MakeLinePlotsSeaborn as line
-from functools                         import partial
-from collections                       import defaultdict
+from Metrix.scores                     import CalcBasicScore
+from sklearn.metrics import accuracy_score,precision_score,recall_score,f1_score,roc_auc_score,matthews_corrcoef, balanced_accuracy_score
 
+class ScoreFuncsSklearn():
+    
+    def __init__(self):
+        self.funcdict = dict(accuracy          = accuracy_score,
+                             precision         = precision_score,
+                             recall            = recall_score,
+                             f1                = f1_score,
+                             auc_roc           = roc_auc_score,
+                             matthews_coeff    = matthews_corrcoef,
+                             balanced_accuracy = balanced_accuracy_score,
+                             )
+
+class CalcBasicScore(ScoreFuncsSklearn):
+    
+    def __init__(self) -> None:
+        super().__init__()
+        scores = dict()
+    
+    def CalcScores(self, y_true, y_pred, y_score):
+        d = dict()
+        for metric_name in self.funcdict.keys():
+            if metric_name != 'auc_roc':
+                score = self.funcdict[metric_name](y_true=y_true, y_pred=y_pred)
+            else:
+                score = self.funcdict[metric_name](y_true=y_true, y_score=y_score)
+                
+            d[metric_name] = score
+                
+        return d
 class MakeScoreTable(CalcBasicScore):
     
     def __init__(self, tlist, targets, model, modeltype, dir_log, dir_score):
@@ -111,26 +130,6 @@ class MakeScoreTable(CalcBasicScore):
         score_bothout = pd.DataFrame.from_dict(d_bothout, orient='index')
         
         return score_cpdout, score_bothout
-    
-    def RenderToFig(self):
-        
-        ax = RenderDF2Fig(self.score_mean)
-        plt.savefig(self.dir_score + 'mean.png')
-
-
-def Barplot(x='target', y=['recall', 'auc_roc', 'matthews_coeff'] , hue='metric'):
-    
-    metrices = ['FCNN', 'SVM', 'Random_Forest', 'XGBoost']
-    logs = pd.DataFrame()
-    
-    for metric in metrices:
-        log           = pd.read_csv('./Score_trtssplit/%s_wodirection/mean.tsv'%metric, sep='\t', index_col=None)
-        log['metric'] = metric
-        log['target'] = log.iloc[:,0]
-        logs          = pd.concat([logs, log], ignore_index=True)
-    log['#tr'].iloc[0]
-    for score in y:
-        bar(logs, xname=x, yname=score, hue=hue, save_fig_name='./Score_trtssplit/Compare_%s.png'%score, rotate_x=True)            
 
 if __name__ == '__main__':
     if platform.system() == 'Darwin':
@@ -160,6 +159,3 @@ if __name__ == '__main__':
                             )
 
         p.GetScores_TakeAverage()
-        # p.RenderToFig()
-        
-        # Barplot()

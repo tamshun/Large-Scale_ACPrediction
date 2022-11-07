@@ -1,31 +1,19 @@
-from importlib_metadata import functools
 import pandas as pd
 import numpy as np
 import os
 import joblib
-from collections import namedtuple
-from sklearn.model_selection import StratifiedShuffleSplit
-
-import pandas as pd
-import numpy as np
-import sys
-import os
 import optuna
 import torch
 from torch                             import nn
-from torch.utils.data                  import dataloader, Subset, DataLoader
-#from torch_geometric.data              import DataLoader
-from Tools.ReadWrite                   import ToJson, LoadJson
+from torch.utils.data                  import Subset, DataLoader
 from collections                       import defaultdict
 from sklearn.metrics                   import roc_auc_score
 from sklearn.model_selection           import StratifiedKFold
 from sklearn.metrics                   import roc_auc_score, accuracy_score
+from BaseFunctions                     import ToJson, LoadJson
 from BaseFunctions_NN                  import Base_wodirection_CGR, torch2numpy, MolGraph, BatchMolGraph, MPNEncoder
 import random
 from functools import partial
-from rdkit import Chem
-from argparse import Namespace
-
 class Dataset(torch.utils.data.Dataset):
     
     def __init__(self, smi_list, label_list):

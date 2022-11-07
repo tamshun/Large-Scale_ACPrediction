@@ -9,13 +9,13 @@ import pandas as pd
 import numpy as np
 import os
 import platform
-from SVM.svmwrappers                     import MMPKernelSVM_sklearn   as svm
-from RandomForest.RandomForestClassifier import RandomForest_cls_CV as rf
-from GradientBoost.XGBoost               import XGBoost_CV as xgb
-from Tools.ReadWrite                     import ReadDataAndFingerprints, ToPickle, ToJson
-from collections                         import defaultdict
-from sklearnex                           import patch_sklearn
-from BaseFunctions                       import Base_wodirection
+from BaseFunctions   import MMPKernelSVM_sklearn   as svm
+from BaseFunctions   import RandomForest_cls_CV as rf
+from BaseFunctions   import XGBoost_CV as xgb
+from BaseFunctions   import Base_wodirection, ToJson
+from collections     import defaultdict
+from sklearnex       import patch_sklearn
+
 
 patch_sklearn()
 

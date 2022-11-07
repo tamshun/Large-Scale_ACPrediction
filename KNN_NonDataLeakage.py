@@ -10,12 +10,10 @@ import numpy as np
 import os
 import platform
 from sklearn.neighbors                   import KNeighborsClassifier
-from Tools.ReadWrite                     import ReadDataAndFingerprints, ToPickle, ToJson
 from collections                         import defaultdict
 from sklearnex                           import patch_sklearn
-from BaseFunctions                       import Base_wodirection
+from BaseFunctions                       import Base_wodirection, funcTanimotoKernel_MMPKernel
 from sklearn.neighbors                   import KNeighborsClassifier
-from Kernels.Kernel                      import funcTanimotoKernel_MMPKernel
 from functools                           import partial
 
 patch_sklearn()

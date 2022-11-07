@@ -3,9 +3,8 @@ import numpy as np
 import os
 from functools                         import partial
 from sklearn.neighbors                 import KNeighborsClassifier
-from Kernels.Kernel                    import funcTanimotoKernel_MMPKernel
-from Fingerprint.Hash2BitManager       import Hash2Bits, FindBitLength
 from collections                       import defaultdict
+from BaseFunctions       import Hash2Bits, FindBitLength, funcTanimotoKernel_MMPKernel
 
 def distance_func(x, y, len_c):
     
