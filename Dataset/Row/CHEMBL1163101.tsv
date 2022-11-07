@@ -1,3 +1,0 @@
-nonstereo_aromatic_smiles	accession	standard_type	organism	lower_pPot_lim	pPot_mean	upper_pPot_lim	chembl_cid	chembl_tid
-CN1CCc2c(c(=O)oc3c(C=O)c(O)ccc23)C1	O75460	Kd	Homo sapiens		6.860120913598763		CHEMBL3265270	CHEMBL1163101
-O=Cc1c(O)ccc2c3c(c(=O)oc12)CNCC3	O75460	Kd	Homo sapiens		6.5301779840218375		CHEMBL4524928	CHEMBL1163101

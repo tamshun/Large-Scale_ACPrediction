@@ -9,11 +9,7 @@ Created on Thu Jun 11 14:09:59 2020
 import pandas as pd
 import numpy as np
 import random
-from MMP.make_input                    import LeaveOneCoreOut, GetDiverseCore, DelTestCpdFromTrain
-from Tools.ReadWrite                   import ToJson
 from Fingerprint.Hash2BitManager       import Hash2Bits, FindBitLength
-from collections                       import defaultdict, namedtuple
-from sklearn.model_selection           import StratifiedShuffleSplit
 from BaseClass                         import Initialize, MultipleAXVSplit, MultipleTrainTestSplit
     
 class Base_wodirection(Initialize):

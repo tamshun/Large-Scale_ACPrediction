@@ -5,13 +5,8 @@ Created on Thu Jun 11 14:09:59 2020
 @author: Tamura
 """
 
-#%%
-
 import pandas as pd
 import numpy as np
-import os
-import joblib
-from sklearn.model_selection import StratifiedShuffleSplit
 from rdkit import Chem
 import torch
 from torch import nn
